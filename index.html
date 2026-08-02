@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.7 — Historique 60j (RSI/momentum) basculé de Finnhub (endpoint /stock/candle fermé au
+          plan gratuit, 403 systématique) vers Twelve Data, avec sérialisation stricte à
+          8 req/min. Premier chargement du jour plus long (~5 min) le temps de tout
+          rapatrier, mais fiable. Onglet Monde : l'horodatage affiché est désormais celui
+          de la cotation elle-même (champ "t" Finnhub), plus celui de l'analyse.
+  v4.6 — Ajout de l'horodatage des cotations dans l'onglet Monde : date/heure complètes
+          affichées en haut de la page, et heure de récupération ajoutée sur chaque vignette.
   v4.5 — Auto-refresh retiré (sélecteur topbar + timer + fonctions associées) pour éviter de
           relancer des analyses en arrière-plan et de re-saturer le quota Finnhub.
   v4.4 — Correctif "Données indisponibles" : les cotations Marchés (~30 symboles) et Monde
@@ -26,7 +33,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5</title>
+<title>Signal Marchés · v4.7</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -284,7 +291,7 @@ a{color:inherit;text-decoration:none;}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="topbar-left">
-          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5</span></span>
+          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.7</span></span>
           <span class="topbar-sep">·</span>
           <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')">🌐 Marchés</button>
           <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')">🗺️ Monde</button>
@@ -502,7 +509,7 @@ async function __fhQuoteRaw(sym){
     if(!r.ok)return null;
     const d=await r.json();
     if(!d||d.c==null||d.c===0)return null;
-    return{price:d.c,prev:d.pc,pct:d.dp};
+    return{price:d.c,prev:d.pc,pct:d.dp,t:d.t};
   }catch{return null;}
 }
 async function fhQuote(sym){return __fhSchedule(()=>__fhQuoteRaw(sym));}
@@ -532,20 +539,31 @@ function mergeCandles(h,k,candles){
   h[k]=[...h[k],...toAdd].sort((a,b)=>a.d.localeCompare(b.d));
   if(h[k].length>60)h[k]=h[k].slice(-60);
 }
-async function fetchCandles(fhSym,localKey,h,meta){
+/* ── Limiteur Twelve Data : plan gratuit = 8 req/min, on sérialise avec ~7.6s d'écart ── */
+let __tdChain=Promise.resolve();
+function __tdSchedule(fn){
+  const run=__tdChain.then(async()=>{
+    const r=await fn();
+    await new Promise(res=>setTimeout(res,7600));
+    return r;
+  });
+  __tdChain=run.catch(()=>{});
+  return run;
+}
+async function fetchCandles(tdSym,localKey,h,meta){
   const today=new Date().toISOString().slice(0,10);
   const nPoints=h[localKey]?.length||0;
   const lastFetch=meta[localKey]||'';
   if(lastFetch===today&&nPoints>=30)return;
-  await __fhSchedule(async()=>{
+  if(!TD)return;
+  await __tdSchedule(async()=>{
     try{
-      const to=Math.floor(Date.now()/1000);
-      const from=to-60*86400;
-      const r=await fetchT(fhUrl(`/stock/candle?symbol=${fhSym}&resolution=D&from=${from}&to=${to}`),8000);
+      const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=60&apikey=${TD}`;
+      const r=await fetchT(url,8000);
       if(!r.ok)return;
       const d=await r.json();
-      if(d.s!=='ok'||!d.t?.length)return;
-      const candles=d.t.map((ts,i)=>({d:new Date(ts*1000).toISOString().slice(0,10),c:d.c[i]}));
+      if(!d.values?.length||d.status?.includes('error')||d.code)return;
+      const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
       mergeCandles(h,localKey,candles);
       meta[localKey]=today;
     }catch{}
@@ -576,11 +594,11 @@ async function fetchStocks(h,meta){
     DATA[k]=q?{label,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'Finnhub'}
              :{label,price:null,prev:null,pct:null,ok:false,closes:[],source:'Finnhub'};
   }));
-  const mainKeys=keys.filter(k=>!STOCKS_FH[k].radar);
+  const commodityKeys=new Set(['JO','SGG']);
+  const mainKeys=keys.filter(k=>!STOCKS_FH[k].radar&&!commodityKeys.has(k));
   const radarKeys=keys.filter(k=>STOCKS_FH[k].radar);
   await Promise.allSettled(mainKeys.map(k=>fetchCandles(STOCKS_FH[k].fh,k,h,meta)));
   for(const k of radarKeys){await fetchCandles(STOCKS_FH[k].fh,k,h,meta);}
-  const commodityKeys=new Set(['JO','SGG']);
   keys.forEach(k=>{
     if(commodityKeys.has(k))return;
     DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
@@ -625,12 +643,14 @@ const WORLD_IDX=[
   {k:'wASX',flag:'🇦🇺',name:'ASX 200 (Australie)',sym:'EWA',hours:[23,29],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'ASX Sydney (proxy US)',type:'ETF pays · actions',sector:'Or & Métaux'},
 ];
 const WORLD_REGIONS=['Asie-Pacifique','Europe','Amérique du Nord','Amérique latine'];
+let _worldFetchedAt=null;
 async function fetchWorldIndices(){
   await Promise.allSettled(WORLD_IDX.map(async w=>{
     const q=await fhQuote(w.sym);
-    DATA[w.k]=q?{label:w.name,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'Finnhub'}
+    DATA[w.k]=q?{label:w.name,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'Finnhub',t:q.t}
                :{label:w.name,price:null,prev:null,pct:null,ok:false,closes:[],source:'Finnhub'};
   }));
+  _worldFetchedAt=new Date();
 }
 function isWorldOpenNow(w){
   const now=new Date();
@@ -656,21 +676,22 @@ async function fetchCommodities(){
   await Promise.allSettled(targets.map(async({k,label,avFn,tdSym,fh})=>{
     if(TD){
       try{
-        const tdUrl=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=30&apikey=${TD}`;
-        const r=await fetchT(tdUrl,8000);
-        if(r.ok){
+        const ok=await __tdSchedule(async()=>{
+          const tdUrl=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=30&apikey=${TD}`;
+          const r=await fetchT(tdUrl,8000);
+          if(!r.ok)return false;
           const d=await r.json();
-          if(d.values?.length&&!d.status?.includes('error')&&!d.code){
-            const vals=d.values;
-            const price=+vals[0].close,prev=vals[1]?+vals[1].close:null;
-            const closes=vals.slice(0,30).reverse().map(v=>+v.close).filter(v=>v>0);
-            if(!h[k])h[k]=[];
-            vals.slice(0,30).forEach(v=>{if(!h[k].find(e=>e.d===v.datetime))h[k].push({d:v.datetime,c:+v.close});});
-            h[k]=h[k].sort((a,b)=>a.d.localeCompare(b.d)).slice(-60);
-            DATA[k]={label,price,prev,pct:prev?((price-prev)/prev)*100:null,ok:true,closes,source:'TwelveData'};
-            return;
-          }
-        }
+          if(!d.values?.length||d.status?.includes('error')||d.code)return false;
+          const vals=d.values;
+          const price=+vals[0].close,prev=vals[1]?+vals[1].close:null;
+          const closes=vals.slice(0,30).reverse().map(v=>+v.close).filter(v=>v>0);
+          if(!h[k])h[k]=[];
+          vals.slice(0,30).forEach(v=>{if(!h[k].find(e=>e.d===v.datetime))h[k].push({d:v.datetime,c:+v.close});});
+          h[k]=h[k].sort((a,b)=>a.d.localeCompare(b.d)).slice(-60);
+          DATA[k]={label,price,prev,pct:prev?((price-prev)/prev)*100:null,ok:true,closes,source:'TwelveData'};
+          return true;
+        });
+        if(ok)return;
       }catch{}
     }
     if(AV){
@@ -1060,8 +1081,8 @@ async function analyserTout(){
     ]);
     await fetchCommodities().catch(()=>{});
     await step(50,'Historique 60j — crypto…');
-    const cryptoFH={BTC:'BINANCE:BTCUSDT',ETH:'BINANCE:ETHUSDT',SOL:'BINANCE:SOLUSDT',XRP:'BINANCE:XRPUSDT'};
-    await Promise.allSettled(Object.entries(cryptoFH).map(([k,sym])=>fetchCryptoCandles(sym,k,h,meta)));
+    const cryptoTD={BTC:'BTC/USD',ETH:'ETH/USD',SOL:'SOL/USD',XRP:'XRP/USD'};
+    await Promise.allSettled(Object.entries(cryptoTD).map(([k,sym])=>fetchCryptoCandles(sym,k,h,meta)));
     ['BTC','ETH','SOL','XRP'].forEach(k=>{
       if(DATA[k]?.ok&&DATA[k].price)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
     });
@@ -1265,12 +1286,14 @@ function renderGlobal(signals,NEWS,ms){
 
 /* ── Rendu : marchés mondiaux ── */
 function renderWorld(){
+  const fmtQuoteTime=t=>t?new Date(t*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   const sections=WORLD_REGIONS.map(region=>{
     const items=WORLD_IDX.filter(w=>w.region===region).slice().sort((a,b)=>a.sector.localeCompare(b.sector)||a.name.localeCompare(b.name));
     if(!items.length)return'';
     const cards=items.map(w=>{
       const d=DATA[w.k];
       const open=isWorldOpenNow(w);
+      const qt=fmtQuoteTime(d?.t);
       return`<div class="wc">
         <div class="wc-top">
           <span class="wc-name"><span class="wc-flag">${w.flag}</span>${w.name}</span>
@@ -1279,7 +1302,7 @@ function renderWorld(){
         <div class="wc-price mono">${d?.ok?fmtPrice(d.price,w.k):'—'}</div>
         <div class="wc-pct mono ${pctCls(d?.pct)}">${d?.ok?fmtPct(d.pct):'Données indisponibles'}</div>
         <div class="wc-type">${w.sector}</div>
-        <div class="wc-meta">${w.bourse} · symbole ${w.sym} · <span class="${open?'g':'r'}">${open?'ouvert':'fermé'}</span></div>
+        <div class="wc-meta">${w.bourse} · symbole ${w.sym} · <span class="${open?'g':'r'}">${open?'ouvert':'fermé'}</span>${qt?` · cotation du ${qt}`:''}</div>
       </div>`;
     }).join('');
     return`<div class="section-title" style="margin-top:1.1rem;">${region}<span class="line"></span></div><div class="world-grid">${cards}</div>`;
