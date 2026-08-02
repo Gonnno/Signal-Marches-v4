@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.11 — Barre du haut mobile : retour aux libellés complets (plus d'icônes seules), la
+          topbar passe simplement sur 2 lignes sous 560px (marque + navigation en haut,
+          horodatage + boutons en dessous) — plus simple et plus lisible que masquer du texte.
+  v4.10 — Cotations en direct (actions/ETF/Monde) désormais aussi couvertes par un repli
+          Twelve Data si Finnhub échoue, comme la crypto l'était déjà. Barre du haut mobile
+          compactée sous 560px : version et libellés de navigation masqués (icônes seules),
+          pour éviter tout débordement/texte coupé sur petit écran.
+  v4.9 — Sources de secours pour l'historique 60j : si Twelve Data échoue sur un symbole
+          actions/ETF, repli automatique sur Alpha Vantage (plafonné à 5 appels/session pour
+          préserver son quota de 25/jour partagé avec le reste du site) ; pour la crypto,
+          repli sur CoinGecko (déjà utilisé pour les cotations, pas de clé requise).
+  v4.8 — Le backfill d'historique 60j (Twelve Data, ~5 min à 8 req/min) ne bloque plus
+          l'affichage : prix et signaux apparaissent immédiatement (avec l'historique déjà
+          en cache), le rapatriement tourne en tâche de fond et enrichit RSI/tendances
+          symbole par symbole, avec un indicateur discret "↻ Historique en cours…" dans
+          la topbar tant que ça tourne.
   v4.7 — Historique 60j (RSI/momentum) basculé de Finnhub (endpoint /stock/candle fermé au
           plan gratuit, 403 systématique) vers Twelve Data, avec sérialisation stricte à
           8 req/min. Premier chargement du jour plus long (~5 min) le temps de tout
@@ -33,7 +49,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.7</title>
+<title>Signal Marchés · v4.11</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -280,6 +296,12 @@ a{color:inherit;text-decoration:none;}
   .spark-hdr,.spark-row{grid-template-columns:1fr 42px 42px 42px 58px;}
   .footer .page-inner{flex-direction:column;gap:.3rem;}
 }
+@media(max-width:560px){
+  .topbar-inner{flex-direction:column;align-items:stretch;gap:.5rem;}
+  .topbar-left{width:100%;justify-content:flex-start;}
+  .topbar-right{width:100%;justify-content:space-between;}
+  .topbar-update#last-update{font-size:9.5px;}
+}
 @media(max-width:420px){
   .fg-widget{grid-template-columns:1fr;justify-items:center;text-align:center;}
 }
@@ -291,15 +313,16 @@ a{color:inherit;text-decoration:none;}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="topbar-left">
-          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.7</span></span>
+          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.11</span></span>
           <span class="topbar-sep">·</span>
-          <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')">🌐 Marchés</button>
-          <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')">🗺️ Monde</button>
-          <button class="tb-nav-item" id="tb-actus" onclick="gotoPage('actus')">📰 Actus</button>
-          <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')">🔗 Liens</button>
+          <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
+          <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
+          <button class="tb-nav-item" id="tb-actus" onclick="gotoPage('actus')"><span class="tb-ic">📰</span><span class="tb-lbl"> Actus</span></button>
+          <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')"><span class="tb-ic">🔗</span><span class="tb-lbl"> Liens</span></button>
         </div>
         <div class="topbar-right">
           <span class="topbar-update mono" id="last-update"></span>
+          <span class="topbar-update mono" id="backfill-status" style="display:none;color:var(--ac2);">↻ Historique en cours…</span>
           <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
           <button class="btn-analyze" id="btn" onclick="analyserTout()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -512,7 +535,20 @@ async function __fhQuoteRaw(sym){
     return{price:d.c,prev:d.pc,pct:d.dp,t:d.t};
   }catch{return null;}
 }
-async function fhQuote(sym){return __fhSchedule(()=>__fhQuoteRaw(sym));}
+async function fhQuote(sym){
+  const r=await __fhSchedule(()=>__fhQuoteRaw(sym));
+  if(r)return r;
+  if(!TD)return null;
+  return __tdSchedule(async()=>{
+    try{
+      const r2=await fetchT(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(sym)}&apikey=${TD}`,7000);
+      if(!r2.ok)return null;
+      const d=await r2.json();
+      if(!d||d.close==null||d.code)return null;
+      return{price:+d.close,prev:d.previous_close!=null?+d.previous_close:null,pct:d.percent_change!=null?+d.percent_change:null,t:d.timestamp};
+    }catch{return null;}
+  });
+}
 const LS_KEY='smv3_hist';   // même clé que la v3 : conserve l'historique 60j déjà accumulé dans le navigateur
 const LS_META='smv3_meta';  // idem
 function loadHist(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):{}}catch{return{}}}
@@ -550,26 +586,88 @@ function __tdSchedule(fn){
   __tdChain=run.catch(()=>{});
   return run;
 }
+/* Alpha Vantage n'a que 25 req/jour au total (déjà partagées avec NEWS_SENTIMENT et le
+   fallback café/sucre) — on plafonne son usage comme filet de secours pour l'historique. */
+let _avCandleFallbacks=0;
+const AV_CANDLE_FALLBACK_MAX=5;
 async function fetchCandles(tdSym,localKey,h,meta){
   const today=new Date().toISOString().slice(0,10);
   const nPoints=h[localKey]?.length||0;
   const lastFetch=meta[localKey]||'';
   if(lastFetch===today&&nPoints>=30)return;
-  if(!TD)return;
-  await __tdSchedule(async()=>{
+  let ok=false;
+  if(TD){
+    ok=await __tdSchedule(async()=>{
+      try{
+        const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=60&apikey=${TD}`;
+        const r=await fetchT(url,8000);
+        if(!r.ok)return false;
+        const d=await r.json();
+        if(!d.values?.length||d.status?.includes('error')||d.code)return false;
+        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
+        mergeCandles(h,localKey,candles);
+        meta[localKey]=today;
+        return true;
+      }catch{return false;}
+    });
+  }
+  if(!ok&&AV&&_avCandleFallbacks<AV_CANDLE_FALLBACK_MAX){
+    _avCandleFallbacks++;
     try{
-      const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=60&apikey=${TD}`;
+      const url=`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(tdSym)}&outputsize=compact&apikey=${AV}`;
       const r=await fetchT(url,8000);
-      if(!r.ok)return;
-      const d=await r.json();
-      if(!d.values?.length||d.status?.includes('error')||d.code)return;
-      const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
-      mergeCandles(h,localKey,candles);
-      meta[localKey]=today;
+      if(r.ok){
+        const d=await r.json();
+        const series=d['Time Series (Daily)'];
+        if(series&&!d.Note&&!d.Information){
+          const candles=Object.entries(series).map(([date,v])=>({d:date,c:+v['4. close']})).filter(c=>c.c>0);
+          mergeCandles(h,localKey,candles);
+          meta[localKey]=today;
+        }
+      }
     }catch{}
-  });
+  }
 }
-async function fetchCryptoCandles(fhSym,localKey,h,meta){await fetchCandles(fhSym,localKey,h,meta);}
+const _cgIds={'BTC/USD':'bitcoin','ETH/USD':'ethereum','SOL/USD':'solana','XRP/USD':'ripple'};
+async function fetchCryptoCandles(tdSym,localKey,h,meta){
+  const today=new Date().toISOString().slice(0,10);
+  const nPoints=h[localKey]?.length||0;
+  const lastFetch=meta[localKey]||'';
+  if(lastFetch===today&&nPoints>=30)return;
+  let ok=false;
+  if(TD){
+    ok=await __tdSchedule(async()=>{
+      try{
+        const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(tdSym)}&interval=1day&outputsize=60&apikey=${TD}`;
+        const r=await fetchT(url,8000);
+        if(!r.ok)return false;
+        const d=await r.json();
+        if(!d.values?.length||d.status?.includes('error')||d.code)return false;
+        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
+        mergeCandles(h,localKey,candles);
+        meta[localKey]=today;
+        return true;
+      }catch{return false;}
+    });
+  }
+  if(!ok){
+    const cgId=_cgIds[tdSym];
+    if(cgId){
+      try{
+        const url=`https://api.coingecko.com/api/v3/coins/${cgId}/market_chart?vs_currency=usd&days=60&interval=daily&_t=${Date.now()}`;
+        const r=await fetchT(url,8000);
+        if(r.ok){
+          const d=await r.json();
+          if(d.prices?.length){
+            const candles=d.prices.map(([ts,price])=>({d:new Date(ts).toISOString().slice(0,10),c:+price})).filter(c=>c.c>0);
+            mergeCandles(h,localKey,candles);
+            meta[localKey]=today;
+          }
+        }
+      }catch{}
+    }
+  }
+}
 
 const STOCKS_FH={
   NVDA:{fh:'NVDA',label:'Nvidia'},AMD:{fh:'AMD',label:'AMD'},TSM:{fh:'TSM',label:'TSMC'},AVGO:{fh:'AVGO',label:'Broadcom'},ASML:{fh:'ASML',label:'ASML'},
@@ -595,10 +693,6 @@ async function fetchStocks(h,meta){
              :{label,price:null,prev:null,pct:null,ok:false,closes:[],source:'Finnhub'};
   }));
   const commodityKeys=new Set(['JO','SGG']);
-  const mainKeys=keys.filter(k=>!STOCKS_FH[k].radar&&!commodityKeys.has(k));
-  const radarKeys=keys.filter(k=>STOCKS_FH[k].radar);
-  await Promise.allSettled(mainKeys.map(k=>fetchCandles(STOCKS_FH[k].fh,k,h,meta)));
-  for(const k of radarKeys){await fetchCandles(STOCKS_FH[k].fh,k,h,meta);}
   keys.forEach(k=>{
     if(commodityKeys.has(k))return;
     DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
@@ -1062,6 +1156,65 @@ const recoMap={
 function step(p,t){document.getElementById('lf').style.width=p+'%';document.getElementById('lt').textContent=t;return new Promise(r=>setTimeout(r,80));}
 
 /* ── Analyse principale ── */
+function computeIndicators(){
+  Object.keys(DATA).forEach(k=>{
+    const d=DATA[k];if(!d?.closes?.length)return;
+    if(d.closes.length>14)d.rsi=rsi14(d.closes);
+    if(d.closes.length>=6)d._p5=((d.closes.at(-1)-d.closes.at(-6))/d.closes.at(-6))*100;
+    if(d.closes.length>=21)d._p20=((d.closes.at(-1)-d.closes.at(-21))/d.closes.at(-21))*100;
+    if(d.closes.length>=11)d._vol=volatilite(d.closes);
+  });
+}
+function computeSignals(NEWS){
+  return{
+    semi:computeSignal(['NVDA','AMD','TSM','AVGO','ASML'],NEWS.filter(n=>_mktKw.semi.test((n.titre||'')+(n.resume||'')))),
+    nasdaq:computeSignal(['QQQ','MSFT','AAPL','META','GOOG'],NEWS.filter(n=>_mktKw.nasdaq.test((n.titre||'')+(n.resume||'')))),
+    europe:computeSignal(['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],NEWS.filter(n=>_mktKw.europe.test((n.titre||'')+(n.resume||'')))),
+    petrole:computeSignal(['USO','XOM','CVX','OXY'],NEWS.filter(n=>_mktKw.petrole.test((n.titre||'')+(n.resume||'')))),
+    or:computeSignal(['GLD','SLV','GDX'],NEWS.filter(n=>_mktKw.or.test((n.titre||'')+(n.resume||'')))),
+    crypto:computeSignal(['BTC','ETH','SOL','XRP'],NEWS.filter(n=>_mktKw.crypto.test((n.titre||'')+(n.resume||'')))),
+    matieres:computeSignal(['WEAT','JO','SGG','UNG','COPX'],NEWS.filter(n=>_mktKw.matieres.test((n.titre||'')+(n.resume||'')))),
+    radar:computeRadarVolatilite(),
+  };
+}
+function recomputeAndRender(){
+  computeIndicators();
+  const ms=getMarketStatus();
+  const signals=computeSignals(_NEWS||[]);
+  _signals=signals;
+  renderGlobal(signals,_NEWS||[],ms);
+  renderWorld();
+}
+/* ── Backfill historique 60j (Twelve Data) en arrière-plan, sans bloquer l'affichage ── */
+let _backfillRunning=false;
+async function backfillHistoryInBackground(h,meta){
+  if(_backfillRunning)return;
+  _backfillRunning=true;
+  _avCandleFallbacks=0;
+  const bEl=document.getElementById('backfill-status');
+  if(bEl)bEl.style.display='inline';
+  try{
+    const keys=Object.keys(STOCKS_FH);
+    const commodityKeys=new Set(['JO','SGG']);
+    const mainKeys=keys.filter(k=>!STOCKS_FH[k].radar&&!commodityKeys.has(k));
+    const radarKeys=keys.filter(k=>STOCKS_FH[k].radar);
+    for(const k of[...mainKeys,...radarKeys]){
+      await fetchCandles(STOCKS_FH[k].fh,k,h,meta);
+      if(DATA[k]?.ok)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
+      saveHist(h);saveMeta(meta);
+      if(!_isRunning)recomputeAndRender();
+    }
+    const cryptoTD={BTC:'BTC/USD',ETH:'ETH/USD',SOL:'SOL/USD',XRP:'XRP/USD'};
+    for(const[k,sym]of Object.entries(cryptoTD)){
+      await fetchCryptoCandles(sym,k,h,meta);
+      if(DATA[k]?.ok)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
+      saveHist(h);saveMeta(meta);
+      if(!_isRunning)recomputeAndRender();
+    }
+  }catch{}
+  _backfillRunning=false;
+  if(bEl)bEl.style.display='none';
+}
 async function analyserTout(){
   if(_isRunning)return;
   _isRunning=true;
@@ -1080,37 +1233,19 @@ async function analyserTout(){
       fetchWorldIndices().catch(()=>{}),
     ]);
     await fetchCommodities().catch(()=>{});
-    await step(50,'Historique 60j — crypto…');
-    const cryptoTD={BTC:'BTC/USD',ETH:'ETH/USD',SOL:'SOL/USD',XRP:'XRP/USD'};
-    await Promise.allSettled(Object.entries(cryptoTD).map(([k,sym])=>fetchCryptoCandles(sym,k,h,meta)));
     ['BTC','ETH','SOL','XRP'].forEach(k=>{
       if(DATA[k]?.ok&&DATA[k].price)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
     });
     saveHist(h);saveMeta(meta);
     await step(68,'RSI · 5j · 20j · volatilité…');
-    Object.keys(DATA).forEach(k=>{
-      const d=DATA[k];if(!d?.closes?.length)return;
-      if(d.closes.length>14)d.rsi=rsi14(d.closes);
-      if(d.closes.length>=6)d._p5=((d.closes.at(-1)-d.closes.at(-6))/d.closes.at(-6))*100;
-      if(d.closes.length>=21)d._p20=((d.closes.at(-1)-d.closes.at(-21))/d.closes.at(-21))*100;
-      if(d.closes.length>=11)d._vol=volatilite(d.closes);
-    });
+    computeIndicators();
     await step(78,'Actualités FR…');
     if(useND)incrementQuota(8);
     const NEWS=rawNews||[];
     _NEWS=NEWS;
     await step(94,'Calcul des signaux…');
     const ms=getMarketStatus();
-    const signals={
-      semi:computeSignal(['NVDA','AMD','TSM','AVGO','ASML'],NEWS.filter(n=>_mktKw.semi.test((n.titre||'')+(n.resume||'')))),
-      nasdaq:computeSignal(['QQQ','MSFT','AAPL','META','GOOG'],NEWS.filter(n=>_mktKw.nasdaq.test((n.titre||'')+(n.resume||'')))),
-      europe:computeSignal(['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],NEWS.filter(n=>_mktKw.europe.test((n.titre||'')+(n.resume||'')))),
-      petrole:computeSignal(['USO','XOM','CVX','OXY'],NEWS.filter(n=>_mktKw.petrole.test((n.titre||'')+(n.resume||'')))),
-      or:computeSignal(['GLD','SLV','GDX'],NEWS.filter(n=>_mktKw.or.test((n.titre||'')+(n.resume||'')))),
-      crypto:computeSignal(['BTC','ETH','SOL','XRP'],NEWS.filter(n=>_mktKw.crypto.test((n.titre||'')+(n.resume||'')))),
-      matieres:computeSignal(['WEAT','JO','SGG','UNG','COPX'],NEWS.filter(n=>_mktKw.matieres.test((n.titre||'')+(n.resume||'')))),
-      radar:computeRadarVolatilite(),
-    };
+    const signals=computeSignals(NEWS);
     _signals=signals;
     await step(100,'Prêt.');
     ldr.style.display='none';btn.disabled=false;btn.style.opacity='';_isRunning=false;
@@ -1119,6 +1254,7 @@ async function analyserTout(){
     renderWorld();
     renderNews(NEWS);
     renderTicker();
+    backfillHistoryInBackground(h,meta);
   }catch(e){
     ldr.style.display='none';btn.disabled=false;btn.style.opacity='';_isRunning=false;
     document.getElementById('sec-global').innerHTML=`<div class="alert-box">⚠ Erreur : ${e.message}<br>Vérifiez votre connexion et vos clés API dans la CONFIG en haut du script.</div>`;
