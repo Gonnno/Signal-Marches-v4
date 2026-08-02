@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5 — Auto-refresh retiré (sélecteur topbar + timer + fonctions associées) pour éviter de
+          relancer des analyses en arrière-plan et de re-saturer le quota Finnhub.
+  v4.4 — Correctif "Données indisponibles" : les cotations Marchés (~30 symboles) et Monde
+          (14 symboles) partaient toutes en même temps vers Finnhub (~45-70 requêtes simultanées,
+          hors du forfait gratuit), provoquant des échecs groupés. Ajout d'un limiteur de débit
+          (6 requêtes Finnhub en parallèle max, avec réessai automatique en cas de 429) partagé
+          par les cotations et l'historique 60j.
   v4.3 — Catégories "Monde" alignées sur les 4 marchés thématiques les plus parlants
           (Semi-conducteurs, Pétrole & Énergie, Or & Métaux, Matières premières), avec
           repli "Actions larges" pour les indices diversifiés ; regroupement régional
@@ -19,7 +26,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.3</title>
+<title>Signal Marchés · v4.5</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -79,8 +86,6 @@ a{color:inherit;text-decoration:none;}
 .ver-tag{font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);background:var(--sur2);padding:2px 6px;border-radius:4px;}
 .topbar-sep{color:var(--tx3);font-size:14px;margin:0 .1rem;}
 .topbar-update{font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);white-space:nowrap;}
-.topbar-refresh{background:var(--sur2);border:1px solid var(--brd);color:var(--tx2);font:400 11px/1 'IBM Plex Mono',monospace;border-radius:7px;padding:6px 8px;cursor:pointer;}
-.topbar-refresh:focus{outline:none;border-color:var(--ac);}
 .tb-nav-item{background:none;border:none;color:var(--tx2);font:500 13px/1 'IBM Plex Sans',sans-serif;cursor:pointer;padding:.4rem .7rem;border-radius:8px;transition:background .15s,color .15s;white-space:nowrap;}
 .tb-nav-item:hover{background:var(--sur2);color:var(--tx);}
 .tb-nav-item.active{background:var(--ac-dim);color:var(--ac2);}
@@ -260,7 +265,6 @@ a{color:inherit;text-decoration:none;}
 .footer .page-inner{max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 /* ── Mobile ── */
 @media(max-width:680px){
-  .topbar-refresh{display:none;}
   .tb-nav-item{padding:.4rem .5rem;font-size:12px;}
   .topbar-sep{display:none;}
   .btn-analyze .btn-label{display:none;}
@@ -280,7 +284,7 @@ a{color:inherit;text-decoration:none;}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="topbar-left">
-          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.3</span></span>
+          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5</span></span>
           <span class="topbar-sep">·</span>
           <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')">🌐 Marchés</button>
           <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')">🗺️ Monde</button>
@@ -289,12 +293,6 @@ a{color:inherit;text-decoration:none;}
         </div>
         <div class="topbar-right">
           <span class="topbar-update mono" id="last-update"></span>
-          <select class="topbar-refresh" id="refresh-select" onchange="syncRefresh(+this.value)">
-            <option value="0">↻ OFF</option>
-            <option value="300">↻ 5 min</option>
-            <option value="900">↻ 15 min</option>
-            <option value="1800">↻ 30 min</option>
-          </select>
           <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
           <button class="btn-analyze" id="btn" onclick="analyserTout()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -392,7 +390,7 @@ const CONFIG={
 const FH=CONFIG.FINNHUB_KEY,ND=CONFIG.NEWSDATA_KEY,AV=CONFIG.ALPHAVANTAGE_KEY,TD=CONFIG.TWELVEDATA_KEY;
 
 const DATA={};
-let _autoTimer=null,_signals=null,_NEWS=[],_newsFilter='all';
+let _signals=null,_NEWS=[],_newsFilter='all';
 const _mktKw={
   semi:/nvidia|amd|tsmc|chip|semi|gpu|broadcom|asml|micron|semiconducteur|puce|intel|qualcomm/i,
   nasdaq:/nasdaq|apple|microsoft|meta|alphabet|google|tech|qqq|amazon|tesla|silicon valley|big tech/i,
@@ -483,24 +481,31 @@ function resetQuota(){
   alert('Quota Newsdata réinitialisé. Relancez une analyse.');
 }
 let _isRunning=false;
-function setAutoRefresh(secs){
-  if(_autoTimer){clearInterval(_autoTimer);_autoTimer=null;}
-  if(secs>0){
-    _autoTimer=setInterval(async()=>{if(_isRunning)return;await analyserTout();},secs*1000);
-  }
-}
-function syncRefresh(secs){setAutoRefresh(secs);document.getElementById('refresh-select').value=String(secs);}
 
 /* ── Data sources ── */
-async function fhQuote(sym){
+/* ── Limiteur de débit Finnhub : évite les rafales (marchés + monde tirent ~45 requêtes
+   en même temps), cause probable des échecs groupés "Données indisponibles" ── */
+let __fhActive=0;
+const __fhQueue=[];
+function __fhPump(){
+  while(__fhActive<6&&__fhQueue.length){
+    const{fn,resolve}=__fhQueue.shift();
+    __fhActive++;
+    fn().then(resolve).finally(()=>{__fhActive--;setTimeout(__fhPump,60);});
+  }
+}
+function __fhSchedule(fn){return new Promise(resolve=>{__fhQueue.push({fn,resolve});__fhPump();});}
+async function __fhQuoteRaw(sym){
   try{
-    const r=await fetchT(fhUrl(`/quote?symbol=${sym}`),6000);
+    let r=await fetchT(fhUrl(`/quote?symbol=${sym}`),6000);
+    if(r.status===429){await new Promise(res=>setTimeout(res,900));r=await fetchT(fhUrl(`/quote?symbol=${sym}`),6000);}
     if(!r.ok)return null;
     const d=await r.json();
     if(!d||d.c==null||d.c===0)return null;
     return{price:d.c,prev:d.pc,pct:d.dp};
   }catch{return null;}
 }
+async function fhQuote(sym){return __fhSchedule(()=>__fhQuoteRaw(sym));}
 const LS_KEY='smv3_hist';   // même clé que la v3 : conserve l'historique 60j déjà accumulé dans le navigateur
 const LS_META='smv3_meta';  // idem
 function loadHist(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):{}}catch{return{}}}
@@ -532,17 +537,19 @@ async function fetchCandles(fhSym,localKey,h,meta){
   const nPoints=h[localKey]?.length||0;
   const lastFetch=meta[localKey]||'';
   if(lastFetch===today&&nPoints>=30)return;
-  try{
-    const to=Math.floor(Date.now()/1000);
-    const from=to-60*86400;
-    const r=await fetchT(fhUrl(`/stock/candle?symbol=${fhSym}&resolution=D&from=${from}&to=${to}`),8000);
-    if(!r.ok)return;
-    const d=await r.json();
-    if(d.s!=='ok'||!d.t?.length)return;
-    const candles=d.t.map((ts,i)=>({d:new Date(ts*1000).toISOString().slice(0,10),c:d.c[i]}));
-    mergeCandles(h,localKey,candles);
-    meta[localKey]=today;
-  }catch{}
+  await __fhSchedule(async()=>{
+    try{
+      const to=Math.floor(Date.now()/1000);
+      const from=to-60*86400;
+      const r=await fetchT(fhUrl(`/stock/candle?symbol=${fhSym}&resolution=D&from=${from}&to=${to}`),8000);
+      if(!r.ok)return;
+      const d=await r.json();
+      if(d.s!=='ok'||!d.t?.length)return;
+      const candles=d.t.map((ts,i)=>({d:new Date(ts*1000).toISOString().slice(0,10),c:d.c[i]}));
+      mergeCandles(h,localKey,candles);
+      meta[localKey]=today;
+    }catch{}
+  });
 }
 async function fetchCryptoCandles(fhSym,localKey,h,meta){await fetchCandles(fhSym,localKey,h,meta);}
 
