@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.15 — Indicateur "↻ Historique en cours…" retiré (backfill toujours en tâche de fond,
+          juste plus affiché). Barre du haut mobile centrée sur ses deux lignes. Notice de
+          classement retirée de l'onglet Monde.
   v4.14 — Ordre exact de la première ligne topbar mobile : logo/version, date, mode nuit,
           puis Analyser.
   v4.13 — Mode nocturne remonté sur la première ligne de la topbar mobile (avec logo,
@@ -61,7 +64,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.14</title>
+<title>Signal Marchés · v4.15</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -308,11 +311,10 @@ a{color:inherit;text-decoration:none;}
   .footer .page-inner{flex-direction:column;gap:.3rem;}
 }
 @media(max-width:560px){
-  .topbar-inner{align-items:center;}
+  .topbar-inner{align-items:center;justify-content:center;}
   .topbar-sep,.tb-spacer{display:none;}
   .topbar-brand{order:1;}
   #last-update{order:2;font-size:9.5px;}
-  #backfill-status{order:3;}
   .theme-toggle{order:4;}
   .btn-analyze{order:5;}
   .tb-break{order:6;flex-basis:100%;height:0;}
@@ -328,7 +330,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.14</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.15</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -336,7 +338,6 @@ a{color:inherit;text-decoration:none;}
         <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')"><span class="tb-ic">🔗</span><span class="tb-lbl"> Liens</span></button>
         <span class="tb-spacer"></span>
         <span class="topbar-update mono" id="last-update"></span>
-        <span class="topbar-update mono" id="backfill-status" style="display:none;color:var(--ac2);">↻ Historique en cours…</span>
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
         <button class="btn-analyze" id="btn" onclick="analyserTout()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -364,7 +365,6 @@ a{color:inherit;text-decoration:none;}
       <!-- PAGE: MONDE -->
       <div class="page" id="page-monde"><div class="page-inner">
         <div class="section-title">Bourses du monde entier<span class="line"></span></div>
-        <div class="info-box" style="margin-top:0;margin-bottom:.9rem;">🌐 Classé par région, puis par bourse d'origine. Chaque carte précise son <b>type</b> (ex. « ETF pays » = un fonds qui réplique les grandes actions d'un pays, coté aux États-Unis pour rester accessible sans clé API payante) — ce n'est pas l'indice officiel lui-même mais un proxy très corrélé. Le point vert/rouge indique si la place d'origine est ouverte en ce moment (horaires UTC, hors jours fériés locaux).</div>
         <div id="world-grid">
           <div class="info-box">Lance une analyse depuis l'onglet Marchés pour charger les indices mondiaux.</div>
         </div>
@@ -1205,8 +1205,6 @@ async function backfillHistoryInBackground(h,meta){
   if(_backfillRunning)return;
   _backfillRunning=true;
   _avCandleFallbacks=0;
-  const bEl=document.getElementById('backfill-status');
-  if(bEl)bEl.style.display='inline';
   try{
     const keys=Object.keys(STOCKS_FH);
     const commodityKeys=new Set(['JO','SGG']);
@@ -1239,7 +1237,6 @@ async function backfillHistoryInBackground(h,meta){
     }
   }catch{}
   _backfillRunning=false;
-  if(bEl)bEl.style.display='none';
 }
 async function analyserTout(){
   if(_isRunning)return;
