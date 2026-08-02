@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.12 — Correctif régression v4.10 : le repli Twelve Data pour les cotations en direct
+          s'était glissé dans le chemin bloquant (avant affichage), recréant le problème de
+          v4.8. JO/SGG (symboles Finnhub inexistants "KC1!"/"SB1!") sont désormais exclus de
+          la boucle de cotation générique — leur prix vient déjà de fetchCommodities. Le repli
+          Twelve Data pour les cotations (actions/ETF/Monde) tourne maintenant uniquement en
+          tâche de fond, sans jamais bloquer l'affichage initial.
+          Topbar mobile : réorganisée comme demandé — logo/version/Analyser/date sur la
+          première ligne, navigation + mode nuit sur la seconde.
   v4.11 — Barre du haut mobile : retour aux libellés complets (plus d'icônes seules), la
           topbar passe simplement sur 2 lignes sous 560px (marque + navigation en haut,
           horodatage + boutons en dessous) — plus simple et plus lisible que masquer du texte.
@@ -49,7 +57,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.11</title>
+<title>Signal Marchés · v4.12</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -101,9 +109,8 @@ a{color:inherit;text-decoration:none;}
 }
 @media(min-width:900px){.topbar{padding:.8rem 2.2rem;}}
 [data-theme="light"] .topbar{background:rgba(255,255,255,0.78);}
-.topbar-inner{max-width:1240px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;}
-.topbar-left{display:flex;align-items:center;gap:.35rem;flex-shrink:0;flex-wrap:wrap;}
-.topbar-right{display:flex;align-items:center;gap:.5rem;flex-shrink:0;}
+.topbar-inner{max-width:1240px;margin:0 auto;width:100%;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.tb-spacer{flex:1 1 auto;}
 .topbar-brand{font:700 15px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;white-space:nowrap;display:flex;align-items:center;gap:6px;}
 .brand-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--cyan));box-shadow:0 0 10px var(--ac);}
 .ver-tag{font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);background:var(--sur2);padding:2px 6px;border-radius:4px;}
@@ -297,10 +304,15 @@ a{color:inherit;text-decoration:none;}
   .footer .page-inner{flex-direction:column;gap:.3rem;}
 }
 @media(max-width:560px){
-  .topbar-inner{flex-direction:column;align-items:stretch;gap:.5rem;}
-  .topbar-left{width:100%;justify-content:flex-start;}
-  .topbar-right{width:100%;justify-content:space-between;}
-  .topbar-update#last-update{font-size:9.5px;}
+  .topbar-inner{align-items:center;}
+  .topbar-sep,.tb-spacer{display:none;}
+  .topbar-brand{order:1;}
+  .btn-analyze{order:2;}
+  #last-update{order:3;font-size:9.5px;}
+  #backfill-status{order:4;}
+  .tb-break{order:5;flex-basis:100%;height:0;}
+  .tb-nav-item{order:6;}
+  .theme-toggle{order:7;}
 }
 @media(max-width:420px){
   .fg-widget{grid-template-columns:1fr;justify-items:center;text-align:center;}
@@ -312,23 +324,21 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <div class="topbar-left">
-          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.11</span></span>
-          <span class="topbar-sep">·</span>
-          <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
-          <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
-          <button class="tb-nav-item" id="tb-actus" onclick="gotoPage('actus')"><span class="tb-ic">📰</span><span class="tb-lbl"> Actus</span></button>
-          <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')"><span class="tb-ic">🔗</span><span class="tb-lbl"> Liens</span></button>
-        </div>
-        <div class="topbar-right">
-          <span class="topbar-update mono" id="last-update"></span>
-          <span class="topbar-update mono" id="backfill-status" style="display:none;color:var(--ac2);">↻ Historique en cours…</span>
-          <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
-          <button class="btn-analyze" id="btn" onclick="analyserTout()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <span class="btn-label">Analyser</span>
-          </button>
-        </div>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.12</span></span>
+        <span class="topbar-sep">·</span>
+        <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
+        <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
+        <button class="tb-nav-item" id="tb-actus" onclick="gotoPage('actus')"><span class="tb-ic">📰</span><span class="tb-lbl"> Actus</span></button>
+        <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')"><span class="tb-ic">🔗</span><span class="tb-lbl"> Liens</span></button>
+        <span class="tb-spacer"></span>
+        <span class="topbar-update mono" id="last-update"></span>
+        <span class="topbar-update mono" id="backfill-status" style="display:none;color:var(--ac2);">↻ Historique en cours…</span>
+        <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
+        <button class="btn-analyze" id="btn" onclick="analyserTout()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="btn-label">Analyser</span>
+        </button>
+        <span class="tb-break"></span>
       </div>
     </div>
     <div class="wticker"><div class="wticker-track" id="wticker-track">
@@ -535,15 +545,14 @@ async function __fhQuoteRaw(sym){
     return{price:d.c,prev:d.pc,pct:d.dp,t:d.t};
   }catch{return null;}
 }
-async function fhQuote(sym){
-  const r=await __fhSchedule(()=>__fhQuoteRaw(sym));
-  if(r)return r;
+async function fhQuote(sym){return __fhSchedule(()=>__fhQuoteRaw(sym));}
+async function tdQuote(sym){
   if(!TD)return null;
   return __tdSchedule(async()=>{
     try{
-      const r2=await fetchT(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(sym)}&apikey=${TD}`,7000);
-      if(!r2.ok)return null;
-      const d=await r2.json();
+      const r=await fetchT(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(sym)}&apikey=${TD}`,7000);
+      if(!r.ok)return null;
+      const d=await r.json();
       if(!d||d.close==null||d.code)return null;
       return{price:+d.close,prev:d.previous_close!=null?+d.previous_close:null,pct:d.percent_change!=null?+d.percent_change:null,t:d.timestamp};
     }catch{return null;}
@@ -686,13 +695,13 @@ const STOCKS_FH={
 };
 async function fetchStocks(h,meta){
   const keys=Object.keys(STOCKS_FH);
-  await Promise.allSettled(keys.map(async k=>{
+  const commodityKeys=new Set(['JO','SGG']);
+  await Promise.allSettled(keys.filter(k=>!commodityKeys.has(k)).map(async k=>{
     const{fh,label}=STOCKS_FH[k];
     const q=await fhQuote(fh);
     DATA[k]=q?{label,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'Finnhub'}
              :{label,price:null,prev:null,pct:null,ok:false,closes:[],source:'Finnhub'};
   }));
-  const commodityKeys=new Set(['JO','SGG']);
   keys.forEach(k=>{
     if(commodityKeys.has(k))return;
     DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
@@ -818,6 +827,7 @@ async function fetchCommodities(){
         }
       }catch{}
     }
+    if(!DATA[k])DATA[k]={label,price:null,prev:null,pct:null,ok:false,closes:[],source:'—'};
   }));
   saveHist(h);
 }
@@ -1199,6 +1209,10 @@ async function backfillHistoryInBackground(h,meta){
     const mainKeys=keys.filter(k=>!STOCKS_FH[k].radar&&!commodityKeys.has(k));
     const radarKeys=keys.filter(k=>STOCKS_FH[k].radar);
     for(const k of[...mainKeys,...radarKeys]){
+      if(!DATA[k]?.ok){
+        const q=await tdQuote(STOCKS_FH[k].fh);
+        if(q)DATA[k]={label:STOCKS_FH[k].label,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'TwelveData'};
+      }
       await fetchCandles(STOCKS_FH[k].fh,k,h,meta);
       if(DATA[k]?.ok)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
       saveHist(h);saveMeta(meta);
@@ -1210,6 +1224,14 @@ async function backfillHistoryInBackground(h,meta){
       if(DATA[k]?.ok)DATA[k].closes=pushAndGet(h,k,DATA[k].price,DATA[k].prev);
       saveHist(h);saveMeta(meta);
       if(!_isRunning)recomputeAndRender();
+    }
+    for(const w of WORLD_IDX){
+      if(DATA[w.k]?.ok)continue;
+      const q=await tdQuote(w.sym);
+      if(q){
+        DATA[w.k]={label:w.name,price:q.price,prev:q.prev,pct:q.pct,ok:true,closes:[],source:'TwelveData',t:q.t};
+        if(!_isRunning)renderWorld();
+      }
     }
   }catch{}
   _backfillRunning=false;
