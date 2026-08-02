@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.2 — Bandeau défilant ralenti (42s → 100s) ; vignettes "Marchés" repassées en 1 colonne ;
+          suppression du décalage au survol dans "Monde" ; les vignettes "Monde" affichent
+          désormais la catégorie de marché dominante (semi-conducteurs, énergie, matières
+          premières…) au lieu du type d'ETF générique, pour lire le risque sectoriel Europe/US.
   v4.1 — Onglet Monde réordonné (Asie-Pacifique → Europe → Amérique du Nord → Amérique latine),
           tri par catégorie de marché au sein de chaque région ; nouvelle palette (fond éclairci,
           accents brass/teal) et police IBM Plex Sans + Fraunces sur signaux/prix vedettes.
@@ -11,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.1</title>
+<title>Signal Marchés · v4.2</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -83,7 +87,7 @@ a{color:inherit;text-decoration:none;}
 .btn-analyze:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 /* ── World ticker ── */
 .wticker{border-bottom:1px solid var(--brd);background:var(--bg2);overflow:hidden;white-space:nowrap;position:relative;}
-.wticker-track{display:inline-flex;gap:0;padding:6px 0;animation:ticker 42s linear infinite;}
+.wticker-track{display:inline-flex;gap:0;padding:6px 0;animation:ticker 100s linear infinite;}
 .wticker:hover .wticker-track{animation-play-state:paused;}
 @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 .wt-item{display:inline-flex;align-items:center;gap:6px;padding:0 1.1rem;font:500 12px/1 'IBM Plex Mono',monospace;border-right:1px solid var(--brd);color:var(--tx2);}
@@ -101,7 +105,7 @@ a{color:inherit;text-decoration:none;}
 .section-title:first-child{margin-top:0;}
 .section-title .line{flex:1;height:1px;background:var(--brd);}
 /* ── Market grid ── */
-.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;margin-bottom:1.4rem;align-items:start;}
+.mkt-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:1.4rem;align-items:start;}
 @media(max-width:700px){.mkt-grid{grid-template-columns:1fr;gap:10px;}}
 @media(max-width:900px){.section-title{margin:1.6rem 0 .7rem;}}
 /* ── Loading ── */
@@ -232,7 +236,7 @@ a{color:inherit;text-decoration:none;}
 /* ── World markets ── */
 .world-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:.5rem;align-items:start;}
 .wc{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:.85rem .95rem;transition:border-color .2s,transform .15s;}
-.wc:hover{border-color:var(--brd2);transform:translateY(-1px);}
+.wc:hover{border-color:var(--brd2);}
 .wc-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:.5rem;}
 .wc-name{font:600 13px/1.2 'IBM Plex Sans',sans-serif;display:flex;align-items:center;gap:6px;}
 .wc-flag{font-size:17px;}
@@ -272,7 +276,7 @@ a{color:inherit;text-decoration:none;}
     <div class="topbar">
       <div class="topbar-inner">
         <div class="topbar-left">
-          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.1</span></span>
+          <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.2</span></span>
           <span class="topbar-sep">·</span>
           <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')">🌐 Marchés</button>
           <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')">🗺️ Monde</button>
@@ -594,20 +598,20 @@ async function fetchCrypto(){
 
 /* ── Marchés mondiaux (ETF proxy) ── */
 const WORLD_IDX=[
-  {k:'wSP500',flag:'🇺🇸',name:'S&P 500',sym:'SPY',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions'},
-  {k:'wNASDAQ',flag:'🇺🇸',name:'Nasdaq 100',sym:'QQQ',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Nasdaq',type:'ETF indiciel · actions'},
-  {k:'wDOW',flag:'🇺🇸',name:'Dow Jones',sym:'DIA',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions'},
-  {k:'wTSX',flag:'🇨🇦',name:'TSX (Canada)',sym:'EWC',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Toronto (proxy US)',type:'ETF pays · actions'},
-  {k:'wBOV',flag:'🇧🇷',name:'Bovespa (Brésil)',sym:'EWZ',hours:[13,20],days:[1,2,3,4,5],region:'Amérique latine',bourse:'B3 São Paulo (proxy US)',type:'ETF pays · actions'},
-  {k:'wCAC',flag:'🇫🇷',name:'CAC 40 (France)',sym:'EWQ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Euronext Paris (proxy US)',type:'ETF pays · actions'},
-  {k:'wDAX',flag:'🇩🇪',name:'DAX (Allemagne)',sym:'EWG',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Deutsche Börse (proxy US)',type:'ETF pays · actions'},
-  {k:'wFTSE',flag:'🇬🇧',name:'FTSE 100 (UK)',sym:'EWU',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'London SE (proxy US)',type:'ETF pays · actions'},
-  {k:'wSTOXX',flag:'🇪🇺',name:'Euro Stoxx 50',sym:'FEZ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Zone euro (proxy US)',type:'ETF indiciel · actions'},
-  {k:'wNIKKEI',flag:'🇯🇵',name:'Nikkei 225 (Japon)',sym:'EWJ',hours:[0,6],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Tokyo (proxy US)',type:'ETF pays · actions'},
-  {k:'wCHINA',flag:'🇨🇳',name:'Chine (large cap)',sym:'FXI',hours:[1.5,7],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Shanghai/HK (proxy US)',type:'ETF pays · actions'},
-  {k:'wINDIA',flag:'🇮🇳',name:'Sensex/Nifty (Inde)',sym:'INDA',hours:[3.75,10],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'BSE/NSE Mumbai (proxy US)',type:'ETF pays · actions'},
-  {k:'wKOSPI',flag:'🇰🇷',name:'KOSPI (Corée du Sud)',sym:'EWY',hours:[0,6.5],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Korea Exchange (proxy US)',type:'ETF pays · actions'},
-  {k:'wASX',flag:'🇦🇺',name:'ASX 200 (Australie)',sym:'EWA',hours:[23,29],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'ASX Sydney (proxy US)',type:'ETF pays · actions'},
+  {k:'wSP500',flag:'🇺🇸',name:'S&P 500',sym:'SPY',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions',sector:'Actions larges · diversifié'},
+  {k:'wNASDAQ',flag:'🇺🇸',name:'Nasdaq 100',sym:'QQQ',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Nasdaq',type:'ETF indiciel · actions',sector:'Tech · semi-conducteurs'},
+  {k:'wDOW',flag:'🇺🇸',name:'Dow Jones',sym:'DIA',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions',sector:'Actions larges · industrie'},
+  {k:'wTSX',flag:'🇨🇦',name:'TSX (Canada)',sym:'EWC',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Toronto (proxy US)',type:'ETF pays · actions',sector:'Matières premières · énergie'},
+  {k:'wBOV',flag:'🇧🇷',name:'Bovespa (Brésil)',sym:'EWZ',hours:[13,20],days:[1,2,3,4,5],region:'Amérique latine',bourse:'B3 São Paulo (proxy US)',type:'ETF pays · actions',sector:'Matières premières · agricole'},
+  {k:'wCAC',flag:'🇫🇷',name:'CAC 40 (France)',sym:'EWQ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Euronext Paris (proxy US)',type:'ETF pays · actions',sector:'Luxe · industrie'},
+  {k:'wDAX',flag:'🇩🇪',name:'DAX (Allemagne)',sym:'EWG',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Deutsche Börse (proxy US)',type:'ETF pays · actions',sector:'Industrie · automobile'},
+  {k:'wFTSE',flag:'🇬🇧',name:'FTSE 100 (UK)',sym:'EWU',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'London SE (proxy US)',type:'ETF pays · actions',sector:'Énergie · finance'},
+  {k:'wSTOXX',flag:'🇪🇺',name:'Euro Stoxx 50',sym:'FEZ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Zone euro (proxy US)',type:'ETF indiciel · actions',sector:'Actions larges · zone euro'},
+  {k:'wNIKKEI',flag:'🇯🇵',name:'Nikkei 225 (Japon)',sym:'EWJ',hours:[0,6],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Tokyo (proxy US)',type:'ETF pays · actions',sector:'Tech · industrie'},
+  {k:'wCHINA',flag:'🇨🇳',name:'Chine (large cap)',sym:'FXI',hours:[1.5,7],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Shanghai/HK (proxy US)',type:'ETF pays · actions',sector:'Tech · actions larges'},
+  {k:'wINDIA',flag:'🇮🇳',name:'Sensex/Nifty (Inde)',sym:'INDA',hours:[3.75,10],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'BSE/NSE Mumbai (proxy US)',type:'ETF pays · actions',sector:'Actions larges · diversifié'},
+  {k:'wKOSPI',flag:'🇰🇷',name:'KOSPI (Corée du Sud)',sym:'EWY',hours:[0,6.5],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Korea Exchange (proxy US)',type:'ETF pays · actions',sector:'Semi-conducteurs · tech'},
+  {k:'wASX',flag:'🇦🇺',name:'ASX 200 (Australie)',sym:'EWA',hours:[23,29],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'ASX Sydney (proxy US)',type:'ETF pays · actions',sector:'Matières premières · minier'},
 ];
 const WORLD_REGIONS=['Asie-Pacifique','Europe','Amérique du Nord','Amérique latine'];
 async function fetchWorldIndices(){
@@ -1251,7 +1255,7 @@ function renderGlobal(signals,NEWS,ms){
 /* ── Rendu : marchés mondiaux ── */
 function renderWorld(){
   const sections=WORLD_REGIONS.map(region=>{
-    const items=WORLD_IDX.filter(w=>w.region===region).slice().sort((a,b)=>a.type.localeCompare(b.type)||a.name.localeCompare(b.name));
+    const items=WORLD_IDX.filter(w=>w.region===region).slice().sort((a,b)=>a.sector.localeCompare(b.sector)||a.name.localeCompare(b.name));
     if(!items.length)return'';
     const cards=items.map(w=>{
       const d=DATA[w.k];
@@ -1263,7 +1267,7 @@ function renderWorld(){
         </div>
         <div class="wc-price mono">${d?.ok?fmtPrice(d.price,w.k):'—'}</div>
         <div class="wc-pct mono ${pctCls(d?.pct)}">${d?.ok?fmtPct(d.pct):'Données indisponibles'}</div>
-        <div class="wc-type">${w.type}</div>
+        <div class="wc-type">${w.sector}</div>
         <div class="wc-meta">${w.bourse} · symbole ${w.sym} · <span class="${open?'g':'r'}">${open?'ouvert':'fermé'}</span></div>
       </div>`;
     }).join('');
