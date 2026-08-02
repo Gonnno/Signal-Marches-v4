@@ -9,38 +9,37 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0a0b13;--bg2:#0e1019;--sur:#141726;--sur2:#1a1e30;--sur3:#232842;
-  --brd:rgba(255,255,255,0.08);--brd2:rgba(255,255,255,0.16);
-  --tx:#eef0fb;--tx2:#8d92b8;--tx3:#565c82;
-  --gr:#2fe28f;--gr-dim:rgba(47,226,143,0.12);
-  --rd:#ff5d78;--rd-dim:rgba(255,93,120,0.12);
-  --am:#ffb648;--am-dim:rgba(255,182,72,0.12);
-  --ac:#6e5bff;--ac2:#a99bff;--ac-dim:rgba(110,91,255,0.15);
-  --cyan:#22d3d0;--cyan-dim:rgba(34,211,208,0.12);
-  --shadow:0 10px 30px -12px rgba(0,0,0,0.5);
+  /* Palette "terminal financier" — ardoise neutre + accent acier, sans dégradés violets */
+  --bg:#0b0c10;--bg2:#0e1014;--sur:#15171d;--sur2:#1b1e25;--sur3:#252932;
+  --brd:rgba(255,255,255,0.07);--brd2:rgba(255,255,255,0.15);
+  --tx:#eceef2;--tx2:#8c91a0;--tx3:#5b6070;
+  --gr:#34d399;--gr-dim:rgba(52,211,153,0.12);
+  --rd:#f2495c;--rd-dim:rgba(242,73,92,0.12);
+  --am:#eab04a;--am-dim:rgba(234,176,74,0.12);
+  --ac:#4c8dc9;--ac2:#7db3e0;--ac-dim:rgba(76,141,201,0.15);
+  --cyan:#3fb8b0;--cyan-dim:rgba(63,184,176,0.12);
+  --shadow:0 10px 26px -14px rgba(0,0,0,0.55);
   --radius:14px;
 }
 [data-theme="light"]{
-  --bg:#f3f4fa;--bg2:#ffffff;--sur:#ffffff;--sur2:#f1f2f9;--sur3:#e7e9f5;
-  --brd:rgba(20,22,50,0.09);--brd2:rgba(20,22,50,0.18);
-  --tx:#15172c;--tx2:#5a5f85;--tx3:#9397b8;
-  --gr:#0ea968;--gr-dim:rgba(14,169,104,0.10);
-  --rd:#dd2e49;--rd-dim:rgba(221,46,73,0.09);
-  --am:#c17800;--am-dim:rgba(193,120,0,0.10);
-  --ac:#5641e0;--ac2:#7a68e8;--ac-dim:rgba(86,65,224,0.10);
-  --cyan:#0a9c98;--cyan-dim:rgba(10,156,152,0.10);
-  --shadow:0 10px 30px -14px rgba(30,30,60,0.18);
+  --bg:#f5f6f9;--bg2:#ffffff;--sur:#ffffff;--sur2:#eef0f5;--sur3:#e2e5ee;
+  --brd:rgba(20,22,35,0.08);--brd2:rgba(20,22,35,0.16);
+  --tx:#161820;--tx2:#565b6c;--tx3:#878ca0;
+  --gr:#0f9d67;--gr-dim:rgba(15,157,103,0.10);
+  --rd:#d9293f;--rd-dim:rgba(217,41,63,0.09);
+  --am:#b3790a;--am-dim:rgba(179,121,10,0.10);
+  --ac:#2f6ea8;--ac2:#4a86bd;--ac-dim:rgba(47,110,168,0.10);
+  --cyan:#1f8a83;--cyan-dim:rgba(31,138,131,0.10);
+  --shadow:0 10px 26px -16px rgba(30,30,45,0.16);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{
-  background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(110,91,255,0.14), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(34,211,208,0.09), transparent 55%),
-    var(--bg);
-  color:var(--tx);font-family:'Space Grotesk',sans-serif;min-height:100vh;font-size:15px;
+  background:linear-gradient(180deg,var(--bg2) 0,var(--bg) 420px);
+  color:var(--tx);font-family:'Space Grotesk',sans-serif;min-height:100vh;font-size:15.5px;
   transition:background-color .3s,color .3s;
 }
+@media(min-width:1100px){body{font-size:16px;}}
 a{color:inherit;text-decoration:none;}
 ::selection{background:var(--ac);color:#fff;}
 ::-webkit-scrollbar{height:8px;width:8px;}
@@ -51,11 +50,12 @@ a{color:inherit;text-decoration:none;}
 .main{flex:1;display:flex;flex-direction:column;min-height:100vh;min-width:0;}
 /* ── Topbar ── */
 .topbar{
-  background:rgba(14,16,25,0.72);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
-  border-bottom:1px solid var(--brd);padding:.6rem 1.4rem;position:sticky;top:0;z-index:60;
+  background:rgba(14,16,20,0.72);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid var(--brd);padding:.65rem 1.4rem;position:sticky;top:0;z-index:60;
 }
+@media(min-width:900px){.topbar{padding:.8rem 2.2rem;}}
 [data-theme="light"] .topbar{background:rgba(255,255,255,0.78);}
-.topbar-inner{max-width:1180px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;}
+.topbar-inner{max-width:1240px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;}
 .topbar-left{display:flex;align-items:center;gap:.35rem;flex-shrink:0;flex-wrap:wrap;}
 .topbar-right{display:flex;align-items:center;gap:.5rem;flex-shrink:0;}
 .topbar-brand{font:700 15px/1 'Space Grotesk',sans-serif;letter-spacing:-.01em;white-space:nowrap;display:flex;align-items:center;gap:6px;}
@@ -70,8 +70,8 @@ a{color:inherit;text-decoration:none;}
 .tb-nav-item.active{background:var(--ac-dim);color:var(--ac2);}
 .theme-toggle{width:32px;height:32px;border-radius:8px;background:var(--sur2);border:1px solid var(--brd);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
 .theme-toggle:hover{border-color:var(--brd2);color:var(--tx);}
-.btn-analyze{padding:.5rem 1.05rem;background:linear-gradient(135deg,var(--ac),#8b7bff);color:#fff;border:none;border-radius:9px;font:600 13px/1 'Space Grotesk',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:transform .15s,box-shadow .15s;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(110,91,255,0.5);}
-.btn-analyze:hover{transform:translateY(-1px);box-shadow:0 6px 18px -4px rgba(110,91,255,0.65);}
+.btn-analyze{padding:.5rem 1.05rem;background:linear-gradient(135deg,var(--ac),#6fb1e6);color:#fff;border:none;border-radius:9px;font:600 13px/1 'Space Grotesk',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:transform .15s,box-shadow .15s;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(76,141,201,0.5);}
+.btn-analyze:hover{transform:translateY(-1px);box-shadow:0 6px 18px -4px rgba(76,141,201,0.65);}
 .btn-analyze:disabled{opacity:.45;cursor:not-allowed;transform:none;}
 /* ── World ticker ── */
 .wticker{border-bottom:1px solid var(--brd);background:var(--bg2);overflow:hidden;white-space:nowrap;position:relative;}
@@ -81,33 +81,35 @@ a{color:inherit;text-decoration:none;}
 .wt-item{display:inline-flex;align-items:center;gap:6px;padding:0 1.1rem;font:500 12px/1 'IBM Plex Mono',monospace;border-right:1px solid var(--brd);color:var(--tx2);}
 .wt-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .wt-dot.on{background:var(--gr);box-shadow:0 0 4px var(--gr);}
-.wt-dot.off{background:var(--tx3);}
+.wt-dot.off{background:var(--rd);}
 /* ── Content ── */
 .content{padding:1.3rem 1.4rem 3rem;flex:1;width:100%;}
+@media(min-width:900px){.content{padding:2rem 2.2rem 3.5rem;}}
 .page{display:none;animation:fadeIn .35s ease;}
 .page.active{display:block;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.page-inner{max-width:1180px;margin:0 auto;}
-.section-title{font:700 13px/1 'Space Grotesk',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin:1.6rem 0 .7rem;display:flex;align-items:center;gap:8px;}
+.page-inner{max-width:1240px;margin:0 auto;}
+.section-title{font:700 13px/1 'Space Grotesk',sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin:2.2rem 0 .9rem;display:flex;align-items:center;gap:8px;}
 .section-title:first-child{margin-top:0;}
 .section-title .line{flex:1;height:1px;background:var(--brd);}
 /* ── Market grid ── */
-.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-bottom:1rem;}
-@media(max-width:700px){.mkt-grid{grid-template-columns:1fr;}}
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;margin-bottom:1.4rem;align-items:start;}
+@media(max-width:700px){.mkt-grid{grid-template-columns:1fr;gap:10px;}}
+@media(max-width:900px){.section-title{margin:1.6rem 0 .7rem;}}
 /* ── Loading ── */
 .ldr-wrap{margin-bottom:1rem;background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:1rem 1.1rem;box-shadow:var(--shadow);}
 .ldr-bar{height:4px;background:var(--sur3);border-radius:3px;overflow:hidden;margin-bottom:.55rem;}
 .ldr-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--cyan));border-radius:3px;width:0;transition:width .4s ease;}
 .ldr-txt{font:400 13px/1 'IBM Plex Mono',monospace;color:var(--tx2);}
 /* ── Fear & Greed ── */
-.fg-widget{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:1.1rem;margin-bottom:1rem;display:grid;grid-template-columns:110px 1fr;gap:1.1rem;align-items:center;box-shadow:var(--shadow);}
+.fg-widget{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:1.3rem 1.4rem;margin-bottom:1.4rem;display:grid;grid-template-columns:110px 1fr;gap:1.3rem;align-items:center;box-shadow:var(--shadow);}
 .fg-gauge{width:110px;height:66px;}
 .fg-gauge svg{width:100%;height:100%;}
 .fg-label{font:700 15px/1 'Space Grotesk',sans-serif;margin-bottom:.35rem;}
 .fg-desc{font:400 12px/1.6 'IBM Plex Mono',monospace;color:var(--tx2);}
 /* ── Vedette ── */
-.vedette{background:linear-gradient(135deg,rgba(110,91,255,.14),rgba(34,211,208,.05));border:1px solid rgba(110,91,255,.3);border-radius:var(--radius);padding:1.15rem 1.25rem;margin-bottom:1rem;position:relative;overflow:hidden;box-shadow:var(--shadow);}
-.vedette::after{content:'';position:absolute;top:-50px;right:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(110,91,255,.14),transparent 70%);pointer-events:none;}
+.vedette{background:linear-gradient(135deg,rgba(76,141,201,.14),rgba(63,184,176,.05));border:1px solid rgba(76,141,201,.32);border-radius:var(--radius);padding:1.4rem 1.6rem;margin-bottom:1.4rem;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.vedette::after{content:'';position:absolute;top:-50px;right:-50px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(76,141,201,.16),transparent 70%);pointer-events:none;}
 .vedette-eyebrow{font:600 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.55rem;}
 .vedette-eyebrow::before{content:'★ ';color:var(--am);}
 .vedette-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.9rem;flex-wrap:wrap;}
@@ -123,15 +125,15 @@ a{color:inherit;text-decoration:none;}
 .mc{background:var(--sur);border:1px solid var(--brd);border-radius:13px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;}
 .mc:hover{border-color:var(--brd2);transform:translateY(-1px);box-shadow:var(--shadow);}
 .mc.open{border-color:var(--brd2);box-shadow:var(--shadow);}
-.mc.star{border-color:rgba(110,91,255,.35);background:linear-gradient(180deg,var(--sur),rgba(110,91,255,.05));}
-.mc-head{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:9px;padding:.75rem .9rem;}
+.mc.star{border-color:rgba(76,141,201,.4);background:linear-gradient(180deg,var(--sur),rgba(76,141,201,.06));}
+.mc-head{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:12px;padding:1rem 1.15rem;}
 .mc-status{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .mc-dot{width:7px;height:7px;border-radius:50%;}
 .mc-dot.on{background:var(--gr);box-shadow:0 0 6px var(--gr);}
-.mc-dot.off{background:var(--tx3);}
+.mc-dot.off{background:var(--rd);box-shadow:0 0 6px rgba(255,93,120,.5);}
 .mc-dlabel{font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;}
 .mc-dlabel.on{color:var(--gr);}
-.mc-dlabel.off{color:var(--tx3);}
+.mc-dlabel.off{color:var(--rd);}
 .mc-hor{font:400 9px/1.3 'IBM Plex Mono',monospace;color:var(--tx3);text-align:center;margin-top:1px;}
 .mc-label{font:600 13px/1.2 'Space Grotesk',sans-serif;color:var(--tx2);display:flex;align-items:center;gap:5px;}
 .mc-star-tag{font:600 10px/1 'IBM Plex Mono',monospace;color:var(--am);}
@@ -140,11 +142,11 @@ a{color:inherit;text-decoration:none;}
 .mc-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
 .mc-arrow{font-size:11px;color:var(--tx3);transition:transform .25s;}
 .mc.open .mc-arrow{transform:rotate(180deg);}
-.mc-quotes-strip{display:flex;flex-wrap:wrap;gap:4px;padding:0 .9rem .6rem;border-bottom:1px solid var(--brd);}
-.mc-q{font:400 11px/1 'IBM Plex Mono',monospace;padding:3px 6px;border-radius:4px;background:var(--sur2);}
+.mc-quotes-strip{display:flex;flex-wrap:wrap;gap:5px;padding:0 1.15rem .75rem;border-bottom:1px solid var(--brd);}
+.mc-q{font:400 11px/1 'IBM Plex Mono',monospace;padding:3px 7px;border-radius:4px;background:var(--sur2);}
 .mc-body{max-height:0;overflow:hidden;transition:max-height .35s ease;}
 .mc.open .mc-body{max-height:3000px;}
-.mc-body-inner{padding:.9rem;}
+.mc-body-inner{padding:1.15rem;}
 /* ── Sparkline table ── */
 .spark-hdr{font:500 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--brd);display:grid;grid-template-columns:1fr 48px 48px 48px 70px;gap:3px;margin-bottom:2px;}
 .spark-hdr span{text-align:right;}
@@ -155,10 +157,10 @@ a{color:inherit;text-decoration:none;}
 .spark-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .spark-val{text-align:right;}
 .spark-svg{height:24px;width:68px;}
-.card2{background:var(--sur2);border-radius:10px;padding:.8rem .9rem;margin-bottom:.65rem;}
-.card2-title{font:600 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.65rem;}
+.card2{background:var(--sur2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:.85rem;}
+.card2-title{font:600 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.8rem;}
 /* ── Why panel ── */
-.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 @media(max-width:420px){.why-grid{grid-template-columns:1fr;}}
 .why-col-h{font:600 10px/1 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem;}
 .why-item{font:400 12px/1.5 'IBM Plex Mono',monospace;color:var(--tx2);padding:4px 0;display:flex;gap:6px;}
@@ -180,9 +182,9 @@ a{color:inherit;text-decoration:none;}
 .warn-box{margin-top:.55rem;font:400 12px/1.5 'IBM Plex Mono',monospace;color:var(--am);background:var(--am-dim);border-radius:7px;padding:.45rem .65rem;border:1px solid rgba(255,182,72,.22);}
 .info-box{font:400 11px/1.6 'IBM Plex Mono',monospace;color:var(--tx3);padding:.5rem .7rem;border-radius:7px;background:var(--sur2);border-left:2px solid var(--ac);margin-top:.55rem;}
 .tr-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:.55rem;}
-.safety-note{font:400 11px/1.6 'IBM Plex Mono',monospace;color:var(--tx3);padding:.6rem .85rem;border-radius:9px;background:var(--sur);border:1px solid var(--brd);border-left:2px solid var(--ac);margin-bottom:.9rem;}
+.safety-note{font:400 11px/1.6 'IBM Plex Mono',monospace;color:var(--tx3);padding:.75rem 1rem;border-radius:9px;background:var(--sur);border:1px solid var(--brd);border-left:2px solid var(--ac);margin-bottom:1.2rem;}
 /* ── Summary card ── */
-.sum-card{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:.9rem 1.05rem;margin-bottom:1rem;}
+.sum-card{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:1.05rem 1.2rem;margin-bottom:1.2rem;}
 .sum-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font:400 12px/1.7 'Space Grotesk',sans-serif;flex-wrap:wrap;}
 /* ── Radar ── */
 .radar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-bottom:.6rem;}
@@ -199,12 +201,12 @@ a{color:inherit;text-decoration:none;}
 .news-title{font:600 13px/1.4 'Space Grotesk',sans-serif;color:var(--tx);margin-bottom:3px;}
 .news-sum{font:400 12px/1.5 'IBM Plex Mono',monospace;color:var(--tx2);margin-bottom:4px;}
 .news-meta{font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.gnews-btn{display:block;margin-top:.6rem;padding:.5rem .7rem;background:var(--sur2);border-radius:8px;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--ac2);text-align:center;transition:background .15s;border:1px solid rgba(110,91,255,.22);}
+.gnews-btn{display:block;margin-top:.6rem;padding:.5rem .7rem;background:var(--sur2);border-radius:8px;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--ac2);text-align:center;transition:background .15s;border:1px solid rgba(76,141,201,.25);}
 .gnews-btn:hover{background:var(--sur3);}
 .news-link{color:var(--ac2);font-size:10px;}
 .news-filters{display:flex;gap:6px;margin-bottom:.9rem;flex-wrap:wrap;}
 .nf-chip{font:500 12px/1 'IBM Plex Mono',monospace;padding:6px 11px;border-radius:20px;background:var(--sur2);border:1px solid var(--brd);color:var(--tx2);cursor:pointer;}
-.nf-chip.active{background:var(--ac-dim);color:var(--ac2);border-color:rgba(110,91,255,.3);}
+.nf-chip.active{background:var(--ac-dim);color:var(--ac2);border-color:rgba(76,141,201,.35);}
 /* ── Sent bar ── */
 .sent-bar-wrap{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:.9rem 1.05rem;margin-bottom:1rem;}
 .sent-bar-title{font:700 13px/1 'Space Grotesk',sans-serif;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;}
@@ -220,7 +222,7 @@ a{color:inherit;text-decoration:none;}
 .etf-pick-name{font:600 12px/1.2 'Space Grotesk',sans-serif;color:var(--tx);margin-bottom:2px;}
 .etf-pick-raison{font:400 11px/1.4 'IBM Plex Mono',monospace;color:var(--tx2);}
 /* ── World markets ── */
-.world-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:9px;margin-bottom:1rem;}
+.world-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:.5rem;align-items:start;}
 .wc{background:var(--sur);border:1px solid var(--brd);border-radius:12px;padding:.85rem .95rem;transition:border-color .2s,transform .15s;}
 .wc:hover{border-color:var(--brd2);transform:translateY(-1px);}
 .wc-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:.5rem;}
@@ -228,9 +230,10 @@ a{color:inherit;text-decoration:none;}
 .wc-flag{font-size:17px;}
 .wc-price{font:700 17px/1 'IBM Plex Mono',monospace;margin-bottom:3px;}
 .wc-pct{font:600 13px/1 'IBM Plex Mono',monospace;}
-.wc-meta{font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);margin-top:5px;display:flex;align-items:center;gap:5px;}
+.wc-type{font:500 10px/1 'IBM Plex Mono',monospace;color:var(--ac2);text-transform:uppercase;letter-spacing:.05em;margin-top:7px;background:var(--ac-dim);display:inline-block;padding:2px 6px;border-radius:4px;}
+.wc-meta{font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3);margin-top:6px;}
 /* ── Liens utiles ── */
-.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px;margin-bottom:1.1rem;}
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1.3rem;align-items:start;}
 .link-card{background:var(--sur);border:1px solid var(--brd);border-radius:11px;padding:.8rem .95rem;display:flex;align-items:center;gap:.7rem;transition:border-color .2s,transform .15s;}
 .link-card:hover{border-color:var(--ac);transform:translateX(2px);}
 .link-ic{width:34px;height:34px;border-radius:9px;background:var(--ac-dim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
@@ -238,7 +241,7 @@ a{color:inherit;text-decoration:none;}
 .link-desc{font:400 11px/1.4 'IBM Plex Mono',monospace;color:var(--tx3);margin-top:1px;}
 /* ── Footer ── */
 .footer{padding:1rem 1.4rem;border-top:1px solid var(--brd);font:400 11px/1.7 'IBM Plex Mono',monospace;color:var(--tx3);}
-.footer .page-inner{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.footer .page-inner{max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 /* ── Mobile ── */
 @media(max-width:680px){
   .topbar-refresh{display:none;}
@@ -303,8 +306,8 @@ a{color:inherit;text-decoration:none;}
       <!-- PAGE: MONDE -->
       <div class="page" id="page-monde"><div class="page-inner">
         <div class="section-title">Bourses du monde entier<span class="line"></span></div>
-        <div class="info-box" style="margin-top:0;margin-bottom:.9rem;">🌐 Indices approximés par des ETF cotés aux US (contournement des restrictions CORS/API sur les places non-américaines en accès gratuit). Statut d'ouverture calculé sur les horaires officiels UTC, hors jours fériés locaux.</div>
-        <div class="world-grid" id="world-grid">
+        <div class="info-box" style="margin-top:0;margin-bottom:.9rem;">🌐 Classé par région, puis par bourse d'origine. Chaque carte précise son <b>type</b> (ex. « ETF pays » = un fonds qui réplique les grandes actions d'un pays, coté aux États-Unis pour rester accessible sans clé API payante) — ce n'est pas l'indice officiel lui-même mais un proxy très corrélé. Le point vert/rouge indique si la place d'origine est ouverte en ce moment (horaires UTC, hors jours fériés locaux).</div>
+        <div id="world-grid">
           <div class="info-box">Lance une analyse depuis l'onglet Marchés pour charger les indices mondiaux.</div>
         </div>
       </div></div>
@@ -341,7 +344,7 @@ a{color:inherit;text-decoration:none;}
     <div class="footer"><div class="page-inner">
       <span>⚠ Informatif uniquement — pas un conseil en investissement. Risque très élevé sur produits à levier.<br>
       Sources : Finnhub · CoinGecko · Newsdata.io (FR) · Alpha Vantage (prix + sentiment news) · Twelve Data</span>
-      <span><a href="https://github.com/Gonnno/Signal-Marches" target="_blank" rel="noopener noreferrer" style="color:var(--ac2);">↗ Code source sur GitHub</a></span>
+      <span><a href="https://github.com/Gonnno/Signal-Marches-v4" target="_blank" rel="noopener noreferrer" style="color:var(--ac2);">↗ Code source sur GitHub</a></span>
     </div></div>
   </div>
 </div>
@@ -583,21 +586,22 @@ async function fetchCrypto(){
 
 /* ── Marchés mondiaux (ETF proxy) ── */
 const WORLD_IDX=[
-  {k:'wSP500',flag:'🇺🇸',name:'S&P 500',sym:'SPY',hours:[14.5,21],days:[1,2,3,4,5]},
-  {k:'wNASDAQ',flag:'🇺🇸',name:'Nasdaq 100',sym:'QQQ',hours:[14.5,21],days:[1,2,3,4,5]},
-  {k:'wDOW',flag:'🇺🇸',name:'Dow Jones',sym:'DIA',hours:[14.5,21],days:[1,2,3,4,5]},
-  {k:'wTSX',flag:'🇨🇦',name:'TSX (Canada)',sym:'EWC',hours:[14.5,21],days:[1,2,3,4,5]},
-  {k:'wBOV',flag:'🇧🇷',name:'Bovespa (Brésil)',sym:'EWZ',hours:[13,20],days:[1,2,3,4,5]},
-  {k:'wCAC',flag:'🇫🇷',name:'CAC 40 (France)',sym:'EWQ',hours:[8,16.5],days:[1,2,3,4,5]},
-  {k:'wDAX',flag:'🇩🇪',name:'DAX (Allemagne)',sym:'EWG',hours:[8,16.5],days:[1,2,3,4,5]},
-  {k:'wFTSE',flag:'🇬🇧',name:'FTSE 100 (UK)',sym:'EWU',hours:[8,16.5],days:[1,2,3,4,5]},
-  {k:'wSTOXX',flag:'🇪🇺',name:'Euro Stoxx 50',sym:'FEZ',hours:[8,16.5],days:[1,2,3,4,5]},
-  {k:'wNIKKEI',flag:'🇯🇵',name:'Nikkei 225 (Japon)',sym:'EWJ',hours:[0,6],days:[1,2,3,4,5]},
-  {k:'wCHINA',flag:'🇨🇳',name:'Chine (large cap)',sym:'FXI',hours:[1.5,7],days:[1,2,3,4,5]},
-  {k:'wINDIA',flag:'🇮🇳',name:'Sensex/Nifty (Inde)',sym:'INDA',hours:[3.75,10],days:[1,2,3,4,5]},
-  {k:'wKOSPI',flag:'🇰🇷',name:'KOSPI (Corée du Sud)',sym:'EWY',hours:[0,6.5],days:[1,2,3,4,5]},
-  {k:'wASX',flag:'🇦🇺',name:'ASX 200 (Australie)',sym:'EWA',hours:[23,29],days:[1,2,3,4,5]},
+  {k:'wSP500',flag:'🇺🇸',name:'S&P 500',sym:'SPY',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions'},
+  {k:'wNASDAQ',flag:'🇺🇸',name:'Nasdaq 100',sym:'QQQ',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Nasdaq',type:'ETF indiciel · actions'},
+  {k:'wDOW',flag:'🇺🇸',name:'Dow Jones',sym:'DIA',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'NYSE Arca',type:'ETF indiciel · actions'},
+  {k:'wTSX',flag:'🇨🇦',name:'TSX (Canada)',sym:'EWC',hours:[14.5,21],days:[1,2,3,4,5],region:'Amérique du Nord',bourse:'Toronto (proxy US)',type:'ETF pays · actions'},
+  {k:'wBOV',flag:'🇧🇷',name:'Bovespa (Brésil)',sym:'EWZ',hours:[13,20],days:[1,2,3,4,5],region:'Amérique latine',bourse:'B3 São Paulo (proxy US)',type:'ETF pays · actions'},
+  {k:'wCAC',flag:'🇫🇷',name:'CAC 40 (France)',sym:'EWQ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Euronext Paris (proxy US)',type:'ETF pays · actions'},
+  {k:'wDAX',flag:'🇩🇪',name:'DAX (Allemagne)',sym:'EWG',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Deutsche Börse (proxy US)',type:'ETF pays · actions'},
+  {k:'wFTSE',flag:'🇬🇧',name:'FTSE 100 (UK)',sym:'EWU',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'London SE (proxy US)',type:'ETF pays · actions'},
+  {k:'wSTOXX',flag:'🇪🇺',name:'Euro Stoxx 50',sym:'FEZ',hours:[8,16.5],days:[1,2,3,4,5],region:'Europe',bourse:'Zone euro (proxy US)',type:'ETF indiciel · actions'},
+  {k:'wNIKKEI',flag:'🇯🇵',name:'Nikkei 225 (Japon)',sym:'EWJ',hours:[0,6],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Tokyo (proxy US)',type:'ETF pays · actions'},
+  {k:'wCHINA',flag:'🇨🇳',name:'Chine (large cap)',sym:'FXI',hours:[1.5,7],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Shanghai/HK (proxy US)',type:'ETF pays · actions'},
+  {k:'wINDIA',flag:'🇮🇳',name:'Sensex/Nifty (Inde)',sym:'INDA',hours:[3.75,10],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'BSE/NSE Mumbai (proxy US)',type:'ETF pays · actions'},
+  {k:'wKOSPI',flag:'🇰🇷',name:'KOSPI (Corée du Sud)',sym:'EWY',hours:[0,6.5],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'Korea Exchange (proxy US)',type:'ETF pays · actions'},
+  {k:'wASX',flag:'🇦🇺',name:'ASX 200 (Australie)',sym:'EWA',hours:[23,29],days:[1,2,3,4,5],region:'Asie-Pacifique',bourse:'ASX Sydney (proxy US)',type:'ETF pays · actions'},
 ];
+const WORLD_REGIONS=['Amérique du Nord','Amérique latine','Europe','Asie-Pacifique'];
 async function fetchWorldIndices(){
   await Promise.allSettled(WORLD_IDX.map(async w=>{
     const q=await fhQuote(w.sym);
@@ -910,7 +914,7 @@ function sparklineSVG(closes){
   if(!closes||closes.length<2)return`<svg class="spark-svg" viewBox="0 0 70 24"><line x1="0" y1="12" x2="70" y2="12" stroke="var(--sur3)" stroke-width="1"/></svg>`;
   const min=Math.min(...closes),max=Math.max(...closes),range=max-min||1;
   const pts=closes.map((v,i)=>{const x=(i/(closes.length-1))*68+1;const y=22-((v-min)/range)*20+1;return`${x},${y}`;});
-  const c=closes.at(-1)>=closes[0]?'#2fe28f':'#ff5d78';
+  const c=closes.at(-1)>=closes[0]?'var(--gr)':'var(--rd)';
   return`<svg class="spark-svg" viewBox="0 0 70 24" preserveAspectRatio="none"><polyline fill="none" stroke="${c}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/></svg>`;
 }
 function computeFG(signals){
@@ -1238,20 +1242,26 @@ function renderGlobal(signals,NEWS,ms){
 
 /* ── Rendu : marchés mondiaux ── */
 function renderWorld(){
-  const html=WORLD_IDX.map(w=>{
-    const d=DATA[w.k];
-    const open=isWorldOpenNow(w);
-    return`<div class="wc">
-      <div class="wc-top">
-        <span class="wc-name"><span class="wc-flag">${w.flag}</span>${w.name}</span>
-        <span class="mc-dot ${open?'on':'off'}"></span>
-      </div>
-      <div class="wc-price mono">${d?.ok?fmtPrice(d.price,w.k):'—'}</div>
-      <div class="wc-pct mono ${pctCls(d?.pct)}">${d?.ok?fmtPct(d.pct):'Données indisponibles'}</div>
-      <div class="wc-meta">Proxy ETF : ${w.sym} · <span class="${open?'g':'dim'}">${open?'ouvert':'fermé'}</span></div>
-    </div>`;
+  const sections=WORLD_REGIONS.map(region=>{
+    const items=WORLD_IDX.filter(w=>w.region===region);
+    if(!items.length)return'';
+    const cards=items.map(w=>{
+      const d=DATA[w.k];
+      const open=isWorldOpenNow(w);
+      return`<div class="wc">
+        <div class="wc-top">
+          <span class="wc-name"><span class="wc-flag">${w.flag}</span>${w.name}</span>
+          <span class="mc-dot ${open?'on':'off'}"></span>
+        </div>
+        <div class="wc-price mono">${d?.ok?fmtPrice(d.price,w.k):'—'}</div>
+        <div class="wc-pct mono ${pctCls(d?.pct)}">${d?.ok?fmtPct(d.pct):'Données indisponibles'}</div>
+        <div class="wc-type">${w.type}</div>
+        <div class="wc-meta">${w.bourse} · symbole ${w.sym} · <span class="${open?'g':'r'}">${open?'ouvert':'fermé'}</span></div>
+      </div>`;
+    }).join('');
+    return`<div class="section-title" style="margin-top:1.1rem;">${region}<span class="line"></span></div><div class="world-grid">${cards}</div>`;
   }).join('');
-  document.getElementById('world-grid').innerHTML=html;
+  document.getElementById('world-grid').innerHTML=sections;
 }
 function renderTicker(){
   const items=WORLD_IDX.map(w=>{
