@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.28 — Radar Volatilité repositionné après Crypto (dernière position). Rendu plus
+          actionnable : quand un actif du radar est en signal VENTE/DANGER, affiche le
+          produit short/inversé correspondant s'il existe (TQQQ→SQQQ, SOXL→SOXS,
+          KWEB→YANG), avec un résumé "X marché(s) inversé(s) détecté(s)" en bas de carte.
   v4.27 — Correctif graphiques d'évolution : moins de 15 points d'historique étirés sur un
           graphique large (v4.26) donnaient une fausse impression de vague lisse. La ligne
           passe en gris neutre avec un compteur "X/60j — historique en cours de
@@ -119,7 +123,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.27</title>
+<title>Signal Marchés · v4.28</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -307,6 +311,7 @@ a{color:inherit;text-decoration:none;}
 .radar-item-lbl{font:600 13px/1 'IBM Plex Sans',sans-serif;margin-bottom:.35rem;}
 .radar-item-vol{font:600 13px/1 'IBM Plex Mono',monospace;margin-bottom:.25rem;}
 .radar-item-sub{font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);}
+.radar-item-short{font:500 10.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--rd);margin-top:5px;}
 /* ── News ── */
 .news-item{border-left:2px solid var(--brd2);padding:.5rem .8rem;margin-bottom:.4rem;border-radius:0 8px 8px 0;display:block;transition:opacity .15s,background .15s;background:var(--sur);border:1px solid var(--brd);border-left-width:3px;}
 .news-item:hover{opacity:.85;}
@@ -387,7 +392,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.27</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.28</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1130,6 +1135,7 @@ function computeSignal(keys,newsItems=[]){
   const reasonsBear=allReasons.filter(r=>r.dir==='bear').sort((a,b)=>b.w-a.w).slice(0,4);
   return{H,Htech,B:cl(100-H,5,95),sig,conf,confPct,newsDelta,n,alerts:allAlerts.slice(0,4),warnings:allWarnings.slice(0,3),reasons:{bull:reasonsBull,bear:reasonsBear},nbBlocked};
 }
+const RADAR_SHORT={TQQQ:{t:'SQQQ',d:'Nasdaq -3x'},SOXL:{t:'SOXS',d:'Semi-conducteurs -3x'},KWEB:{t:'YANG',d:'Chine tech -3x'}};
 function computeRadarVolatilite(){
   const panel=Object.keys(STOCKS_FH).filter(k=>STOCKS_FH[k].radar);
   return panel.map(k=>{
@@ -1138,7 +1144,8 @@ function computeRadarVolatilite(){
     const vol=d._vol!=null?d._vol:(d.pct!=null?Math.abs(d.pct):null);
     const sig=blocked?(d._p5!=null&&d._p5<-8?'VENTE':'NEUTRE'):(score>=60?'ACHAT':score<=42?'VENTE':'NEUTRE');
     const nbCrit=alerts.filter(a=>a.msg?.startsWith('🚨')).length;
-    return{key:k,label:d.label,pct:d.pct,vol,p5:d._p5,score,sig:nbCrit>=1?'DANGER':sig,alerts,hasHistory:d._vol!=null};
+    const finalSig=nbCrit>=1?'DANGER':sig;
+    return{key:k,label:d.label,pct:d.pct,vol,p5:d._p5,score,sig:finalSig,alerts,hasHistory:d._vol!=null,short:(finalSig==='VENTE'||finalSig==='DANGER')?RADAR_SHORT[k]:null};
   }).filter(Boolean).sort((a,b)=>(b.vol||0)-(a.vol||0)).slice(0,4);
 }
 function getMarketStatus(){
@@ -1414,8 +1421,8 @@ function renderGlobal(signals,NEWS,ms){
     {key:'or',icon:'🥇',label:'Or & Métaux',sub:'GLD · Argent · Minières Or',open:ms.or,horaire:'Comex lun–ven',keys:['GLD','SLV','GDX'],labels:['GLD/Or','SLV/Argent','GDX/Minières']},
     {key:'europe',icon:'🇪🇺',label:'Bourse Européenne',sub:'TotalEnergies · Airbus · LVMH · Sanofi · BNP',open:ms.europe,horaire:'Euronext 9h–17h30',keys:['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],labels:['TotalEnergies','Airbus','LVMH','Sanofi','BNP',"L'Oréal"]},
     {key:'nasdaq',icon:'📈',label:'Nasdaq 100',sub:'QQQ · MSFT · Apple · Meta · Alphabet',open:ms.nasdaq,horaire:'Nasdaq 15h30–22h',keys:['QQQ','MSFT','AAPL','META','GOOG'],labels:['QQQ','Microsoft','Apple','Meta','Alphabet']},
-    {key:'radar',icon:'⚡',label:'Radar Volatilité',sub:'Scan auto — ETF les plus agités',open:ms.nasdaq,horaire:'NYSE 15h30–22h',keys:[],labels:[],isRadar:true},
     {key:'crypto',icon:'₿',label:'Crypto',sub:'Bitcoin · Ethereum · Solana · XRP',open:ms.crypto,horaire:'24h / 7j',keys:['BTC','ETH','SOL','XRP'],labels:['Bitcoin','Ethereum','Solana','XRP']},
+    {key:'radar',icon:'⚡',label:'Radar Volatilité',sub:'Scan auto — ETF les plus agités',open:ms.nasdaq,horaire:'NYSE 15h30–22h',keys:[],labels:[],isRadar:true},
   ];
   const {vedette,s:sv,raisons,miniActifs}=choisirVedette(MKTS,signals);
   const fgHTML=fgGaugeHTML(computeFG(signals));
@@ -1448,10 +1455,13 @@ function renderGlobal(signals,NEWS,ms){
           <div class="radar-item-lbl">${['🥇','🥈','🥉','4·'][i]||''} ${r.label}</div>
           <div class="radar-item-vol ${cls}">${volTxt}</div>
           <div class="radar-item-sub"><span class="${pctCls(r.pct)}">${fmtPct(r.pct)} jour</span> · <span class="badge ${badgeCls(r.sig)}" style="font-size:8px;padding:1px 5px;">${r.sig}</span></div>
+          ${r.short?`<div class="radar-item-short">↓ Inversé — short possible : <b>${r.short.t}</b> (${r.short.d})</div>`:''}
         </div>`;
       }).join('');
       const avgCls=avgVol>4?'r':avgVol>2?'a':avgVol>0?'g':'dim';
       const radarReco=avgVol>4?'🚨 Volatilité extrême — aucune position recommandée.':avgVol>2.5?'⚠ Volatilité élevée — positions courtes uniquement, stop serré.':'✓ Volatilité modérée — opportunités tactiques possibles.';
+      const nbShort=top.filter(r=>r.short).length;
+      const shortReco=nbShort?`<div class="reco" style="color:var(--rd);">↓ ${nbShort} marché${nbShort>1?'s':''} inversé${nbShort>1?'s':''} détecté${nbShort>1?'s':''} — un produit short existe pour en profiter (voir détail ci-dessus).</div>`:'';
       return`<div class="mc" id="mc-radar" onclick="toggleMC('radar')">
         <div class="mc-head">
           <div class="mc-status"><div class="mc-dot on"></div><span class="mc-dlabel on">SCAN</span><span class="mc-hor">${top.length} actifs</span></div>
@@ -1461,6 +1471,7 @@ function renderGlobal(signals,NEWS,ms){
         <div class="mc-body"><div class="mc-body-inner">
           <div class="radar-grid">${radarItems}</div>
           <div class="reco">→ ${radarReco}</div>
+          ${shortReco}
           <div class="info-box">Ces ETF US servent uniquement au signal de volatilité — ils ne sont pas nécessairement disponibles chez tous les courtiers. Utilise les sélections de la carte thématique correspondante.</div>
         </div></div>
       </div>`;
