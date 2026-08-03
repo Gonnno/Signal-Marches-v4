@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.31 — Correctif barre de défilement grisâtre/mal thémée sur Firefox : le site ne stylait
+          la scrollbar qu'en CSS "webkit" (Chrome/Edge/Safari), ignoré par Firefox qui
+          affichait sa barre native par défaut. Ajout de l'équivalent scrollbar-width/
+          scrollbar-color pour un rendu sombre cohérent sur Firefox aussi.
+  v4.30 — Graphiques d'évolution : seuil "historique en cours de constitution" relevé de 15
+          à 30 points (15-25 points réels donnaient encore le même effet de vague trompeur,
+          juste en couleur pleine). Échelle verticale moins "zoomée" : les fluctuations
+          n'occupent plus 100% de la hauteur du graphique, rendu plus calme et moins
+          dramatisé pour un mouvement de prix modeste.
   v4.29 — Sélection "Sous-jacent(s) volatil(s)" enrichie avec les produits à effet de levier
           réellement suivis (semi-conducteurs, pétrole, agriculture x2/x3, avec versions long
           ET short) : sur signal ACHAT elle propose désormais un produit haussier x2/x3, sur
@@ -129,7 +138,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.29</title>
+<title>Signal Marchés · v4.31</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -159,7 +168,7 @@
   --shadow:0 10px 26px -16px rgba(30,30,45,0.16);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--sur3) var(--bg);}
 body{
   background:linear-gradient(180deg,var(--bg2) 0,var(--bg) 420px);
   color:var(--tx);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;font-size:15.5px;
@@ -398,7 +407,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.29</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.31</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1170,10 +1179,12 @@ function getMarketStatus(){
 }
 function sparklineSVG(closes){
   if(!closes||closes.length<2)return`<div class="spark-wrap"><svg class="spark-svg" viewBox="0 0 70 24"><line x1="0" y1="12" x2="70" y2="12" stroke="var(--sur3)" stroke-width="1"/></svg><span class="spark-note">historique en cours de constitution</span></div>`;
-  const min=Math.min(...closes),max=Math.max(...closes),range=max-min||1;
+  const rawMin=Math.min(...closes),rawMax=Math.max(...closes),rawRange=rawMax-rawMin||1;
+  const pad=rawRange*0.7;
+  const min=rawMin-pad,range=(rawRange+pad*2)||1;
   const pts=closes.map((v,i)=>{const x=(i/(closes.length-1))*68+1;const y=22-((v-min)/range)*20+1;return`${x},${y}`;});
   const c=closes.at(-1)>=closes[0]?'var(--gr)':'var(--rd)';
-  const sparse=closes.length<15;
+  const sparse=closes.length<30;
   const svg=`<svg class="spark-svg" viewBox="0 0 70 24" preserveAspectRatio="none"><polyline fill="none" stroke="${sparse?'var(--tx3)':c}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/></svg>`;
   return sparse?`<div class="spark-wrap">${svg}<span class="spark-note">${closes.length}/60j — historique en cours de constitution</span></div>`:svg;
 }
