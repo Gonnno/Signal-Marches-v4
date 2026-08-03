@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.26 — Corrigé l'espace perdu dans les vignettes Marchés sur PC (la colonne "Actif" en
+          1fr s'étirait sans limite en carte pleine largeur) : largeur plafonnée pour le nom,
+          et l'espace récupéré agrandit le graphique d'évolution. Ordre des vignettes revu :
+          Semi-conducteurs, Pétrole & Énergie, Matières premières, Or & Métaux en tête, puis
+          Bourse Européenne et Nasdaq 100, Radar Volatilité redescendu (redondant avec le
+          Risque x2/x3), Crypto en dernier.
   v4.25 — Focus déplacé du prévisionnel (tendance 5j, retirée) vers le temps réel : la
           colonne "5j" de chaque marché est remplacée par "Risque x2/x3", l'amplitude
           quotidienne théorique sur un produit à effet de levier (±volatilité × 2 et × 3),
@@ -108,7 +114,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.25</title>
+<title>Signal Marchés · v4.26</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -250,15 +256,15 @@ a{color:inherit;text-decoration:none;}
 .mc.open .mc-body{max-height:3000px;}
 .mc-body-inner{padding:1.15rem;}
 /* ── Sparkline table ── */
-.spark-hdr{font:500 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--brd);display:grid;grid-template-columns:1fr 48px 48px 48px 70px;gap:3px;margin-bottom:2px;}
+.spark-hdr{font:500 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;padding-bottom:6px;border-bottom:1px solid var(--brd);display:grid;grid-template-columns:minmax(90px,200px) 56px 56px 90px 1fr;gap:10px;margin-bottom:2px;}
 .spark-hdr span{text-align:right;}
 .spark-hdr span:first-child{text-align:left;}
-.spark-row{display:grid;grid-template-columns:1fr 48px 48px 48px 70px;gap:3px;align-items:center;font:400 12px/1 'IBM Plex Mono',monospace;color:var(--tx2);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.spark-row{display:grid;grid-template-columns:minmax(90px,200px) 56px 56px 90px 1fr;gap:10px;align-items:center;font:400 12px/1 'IBM Plex Mono',monospace;color:var(--tx2);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 [data-theme="light"] .spark-row{border-bottom-color:rgba(0,0,0,.05);}
 .spark-row:last-child{border-bottom:none;}
 .spark-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .spark-val{text-align:right;}
-.spark-svg{height:24px;width:68px;}
+.spark-svg{height:24px;width:100%;display:block;}
 .card2{background:var(--sur2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:.85rem;}
 .card2-title{font:600 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.8rem;}
 /* ── Why panel ── */
@@ -351,7 +357,7 @@ a{color:inherit;text-decoration:none;}
   .btn-analyze .btn-label{display:none;}
   .btn-analyze{padding:.5rem .75rem;}
   .mc-hor{display:none;}
-  .spark-hdr,.spark-row{grid-template-columns:1fr 42px 42px 42px 58px;}
+  .spark-hdr,.spark-row{grid-template-columns:minmax(60px,110px) 42px 42px 62px 1fr;gap:6px;}
   .footer .page-inner{flex-direction:column;gap:.3rem;}
 }
 @media(max-width:560px){
@@ -374,7 +380,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.25</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.26</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1394,13 +1400,13 @@ function renderGlobal(signals,NEWS,ms){
   const nbTotal=Object.keys(DATA).length;
   const MKTS=[
     {key:'semi',icon:'🔬',label:'Semi-conducteurs',sub:'NVDA · AMD · TSMC · Broadcom · ASML',open:ms.semi,horaire:'NYSE 15h30–22h',keys:['NVDA','AMD','TSM','AVGO','ASML'],labels:['Nvidia','AMD','TSMC','Broadcom','ASML']},
-    {key:'nasdaq',icon:'📈',label:'Nasdaq 100',sub:'QQQ · MSFT · Apple · Meta · Alphabet',open:ms.nasdaq,horaire:'Nasdaq 15h30–22h',keys:['QQQ','MSFT','AAPL','META','GOOG'],labels:['QQQ','Microsoft','Apple','Meta','Alphabet']},
-    {key:'europe',icon:'🇪🇺',label:'Bourse Européenne',sub:'TotalEnergies · Airbus · LVMH · Sanofi · BNP',open:ms.europe,horaire:'Euronext 9h–17h30',keys:['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],labels:['TotalEnergies','Airbus','LVMH','Sanofi','BNP',"L'Oréal"]},
     {key:'petrole',icon:'🛢️',label:'Pétrole & Énergie',sub:'USO/WTI · ExxonMobil · Chevron · Occidental',open:ms.petrole,horaire:'CME Futures 24h/5j',keys:['USO','XOM','CVX','OXY'],labels:['USO/WTI','ExxonMobil','Chevron','Occidental']},
-    {key:'or',icon:'🥇',label:'Or & Métaux',sub:'GLD · Argent · Minières Or',open:ms.or,horaire:'Comex lun–ven',keys:['GLD','SLV','GDX'],labels:['GLD/Or','SLV/Argent','GDX/Minières']},
-    {key:'crypto',icon:'₿',label:'Crypto',sub:'Bitcoin · Ethereum · Solana · XRP',open:ms.crypto,horaire:'24h / 7j',keys:['BTC','ETH','SOL','XRP'],labels:['Bitcoin','Ethereum','Solana','XRP']},
     {key:'matieres',icon:'🌾',label:'Matières premières',sub:'Blé · Café · Sucre · Gaz naturel · Cuivre',open:ms.nasdaq,horaire:'CME lun–ven',keys:['WEAT','JO','SGG','UNG','COPX'],labels:['Blé','Café','Sucre','Gaz naturel','Cuivre']},
+    {key:'or',icon:'🥇',label:'Or & Métaux',sub:'GLD · Argent · Minières Or',open:ms.or,horaire:'Comex lun–ven',keys:['GLD','SLV','GDX'],labels:['GLD/Or','SLV/Argent','GDX/Minières']},
+    {key:'europe',icon:'🇪🇺',label:'Bourse Européenne',sub:'TotalEnergies · Airbus · LVMH · Sanofi · BNP',open:ms.europe,horaire:'Euronext 9h–17h30',keys:['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],labels:['TotalEnergies','Airbus','LVMH','Sanofi','BNP',"L'Oréal"]},
+    {key:'nasdaq',icon:'📈',label:'Nasdaq 100',sub:'QQQ · MSFT · Apple · Meta · Alphabet',open:ms.nasdaq,horaire:'Nasdaq 15h30–22h',keys:['QQQ','MSFT','AAPL','META','GOOG'],labels:['QQQ','Microsoft','Apple','Meta','Alphabet']},
     {key:'radar',icon:'⚡',label:'Radar Volatilité',sub:'Scan auto — ETF les plus agités',open:ms.nasdaq,horaire:'NYSE 15h30–22h',keys:[],labels:[],isRadar:true},
+    {key:'crypto',icon:'₿',label:'Crypto',sub:'Bitcoin · Ethereum · Solana · XRP',open:ms.crypto,horaire:'24h / 7j',keys:['BTC','ETH','SOL','XRP'],labels:['Bitcoin','Ethereum','Solana','XRP']},
   ];
   const {vedette,s:sv,raisons,miniActifs}=choisirVedette(MKTS,signals);
   const fgHTML=fgGaugeHTML(computeFG(signals));
