@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.29 — Sélection "Sous-jacent(s) volatil(s)" enrichie avec les produits à effet de levier
+          réellement suivis (semi-conducteurs, pétrole, agriculture x2/x3, avec versions long
+          ET short) : sur signal ACHAT elle propose désormais un produit haussier x2/x3, sur
+          VENTE un produit short x2/x3 — au lieu de rester sur un tracker simple 1x quel que
+          soit le sens du signal. Repli sur les instruments 1x existants si aucun produit à
+          effet de levier ne correspond à la catégorie/direction.
   v4.28 — Radar Volatilité repositionné après Crypto (dernière position). Rendu plus
           actionnable : quand un actif du radar est en signal VENTE/DANGER, affiche le
           produit short/inversé correspondant s'il existe (TQQQ→SQQQ, SOXL→SOXS,
@@ -123,7 +129,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.28</title>
+<title>Signal Marchés · v4.29</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -392,7 +398,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.28</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.29</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1228,6 +1234,17 @@ const TR_VOLATILS=[
   {n:'Wheat',isin:'JE00BYQY8102',tags:['europe','matieres'],raison:'Tensions géopolitiques (Ukraine), aléas climatiques mondiaux'},
   {n:'Emerging Markets',isin:'IE00BYTYHN28',tags:['crypto'],raison:'Cumul risques change + géopolitique + flux de capitaux'},
 ];
+/* Produits à effet de levier réellement suivis (portefeuille perso) — pas d'ISIN fourni pour
+   éviter d'en inventer un ; vérifier le nom exact chez le courtier avant tout ordre. */
+const TR_LEVERAGE=[
+  {n:'PHLX Semiconductor 3x Daily Leveraged (Acc)',lev:'x3',tags:['semi'],dir:'bull',raison:'Amplifie x3 une hausse du secteur semi-conducteurs — violent en cas de catalyseur positif (résultats, IA).'},
+  {n:'PHLX Semiconductor 3x Daily Short (Acc)',lev:'x3 short',tags:['semi'],dir:'bear',raison:'Profite d\'une baisse du secteur semi-conducteurs, amplifiée x3 — utile en cas de correction tech ou tensions Taïwan.'},
+  {n:'WTI Crude Oil 3x Lev USD (Acc)',lev:'x3',tags:['petrole'],dir:'bull',raison:'Amplifie x3 une hausse du WTI — sensible OPEP+, tensions géopolitiques Moyen-Orient.'},
+  {n:'WTI Crude Oil 3x Daily Short',lev:'x3 short',tags:['petrole'],dir:'bear',raison:'Profite d\'une baisse du WTI, amplifiée x3 — utile en cas de sur-offre ou ralentissement de la demande.'},
+  {n:'Petroleum 2x Lev USD',lev:'x2',tags:['petrole'],dir:'bull',raison:'Variante x2, moins agressive que le x3, pour une exposition haussière pétrole plus mesurée.'},
+  {n:'Wheat 3x Lev USD',lev:'x3',tags:['matieres'],dir:'bull',raison:'Amplifie x3 une hausse du blé — sensible aux tensions géopolitiques (Ukraine) et aléas climatiques.'},
+  {n:'2x Lev Agriculture USD',lev:'x2',tags:['matieres'],dir:'bull',raison:'Exposition agricole large amplifiée x2 — blé, maïs, soja combinés.'},
+];
 const GNEWS_QUERIES={
   semi:'semi+conducteurs+bourse',nasdaq:'nasdaq+bourse+tech',europe:'bourse+europe+cac+dax',
   petrole:'pétrole+bourse+énergie',or:'or+bourse+métaux+précieux',crypto:'bitcoin+crypto+bourse',
@@ -1238,9 +1255,11 @@ function gnewsUrl(key){
   return`https://www.google.com/search?q=${q}&num=10&tbs=qdr%3Ad%2Csbd%3A1&tbm=nws`;
 }
 function selectionETF(key,sig,newsItems){
+  const dir=sig==='ACHAT'?'bull':sig==='VENTE'?'bear':null;
+  const levMatch=dir?TR_LEVERAGE.filter(s=>s.tags.includes(key)&&s.dir===dir):[];
   const pertinents=TR_VOLATILS.filter(s=>s.tags.includes(key));
   const autres=TR_VOLATILS.filter(s=>!s.tags.includes(key));
-  const pool=[...pertinents,...autres];
+  const pool=[...levMatch,...pertinents,...autres];
   const bullScore=newsItems.filter(n=>n.impact==='bull').length;
   const bearScore=newsItems.filter(n=>n.impact==='bear').length;
   const sentiment=bullScore>bearScore?'bull':bearScore>bullScore?'bear':'neutral';
@@ -1249,14 +1268,14 @@ function selectionETF(key,sig,newsItems){
   const sentTxt=sentiment==='bull'?'🟢 haussier':sentiment==='bear'?'🔴 baissier':'🟡 neutre';
   const badges=picks.map(e=>`
     <div class="etf-pick">
-      <div class="etf-pick-name">${e.n} <span class="mono" style="font-size:10px;color:var(--tx3);">${e.isin}</span></div>
+      <div class="etf-pick-name">${e.n} ${e.isin?`<span class="mono" style="font-size:10px;color:var(--tx3);">${e.isin}</span>`:`<span class="badge" style="font-size:8px;padding:1px 6px;background:${e.dir==='bear'?'var(--rd-dim)':'var(--gr-dim)'};color:${e.dir==='bear'?'var(--rd)':'var(--gr)'};">${e.lev}</span>`}</div>
       <div class="etf-pick-raison">${e.raison}</div>
     </div>`).join('');
   return`<div class="etf-section">
     <div class="etf-label">⚡ Sous-jacent(s) volatil(s) · sentiment ${sentTxt}</div>
     ${actuRef?`<div class="etf-actu">${actuRef}</div>`:''}
     <div class="etf-picks">${badges}</div>
-    <div class="info-box" style="margin-top:.5rem;">⚠ Produits ×3 — risque de perte totale en cas de retournement. Stop-loss obligatoire.</div>
+    <div class="info-box" style="margin-top:.5rem;">⚠ Produits à effet de levier — risque de perte totale en cas de retournement. Stop-loss obligatoire. Vérifie le nom exact et l'ISIN chez ton courtier avant tout ordre.</div>
   </div>`;
 }
 const recoMap={
