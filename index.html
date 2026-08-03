@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.25 — Focus déplacé du prévisionnel (tendance 5j, retirée) vers le temps réel : la
+          colonne "5j" de chaque marché est remplacée par "Risque x2/x3", l'amplitude
+          quotidienne théorique sur un produit à effet de levier (±volatilité × 2 et × 3),
+          colorée selon le niveau de risque. La vedette du moment ne cite plus la tendance
+          5j, seulement les critères du jour (RSI, volatilité, hausse du jour).
   v4.24 — Lancer une nouvelle analyse bascule automatiquement sur l'onglet Marchés, même si
           on se trouvait sur Monde/Actus/Liens au moment du clic.
   v4.23 — Correctif : une vignette Marchés dépliée se refermait toute seule après quelques
@@ -103,7 +108,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.24</title>
+<title>Signal Marchés · v4.25</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -369,7 +374,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.24</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.25</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1179,7 +1184,6 @@ function choisirVedette(MKTS,signals){
   const raisons=[];
   const rsiSains=actifs.filter(k=>DATA[k]?.rsi&&DATA[k].rsi>45&&DATA[k].rsi<65);
   if(rsiSains.length)raisons.push(`RSI sain (${rsiSains.length}/${actifs.length})`);
-  const h5=actifs.filter(k=>DATA[k]?._p5>2);if(h5.length)raisons.push(`Tendance 5j ↑ (${h5.length})`);
   const vf=actifs.filter(k=>DATA[k]?._vol!=null&&DATA[k]._vol<2);if(vf.length)raisons.push('Faible volatilité');
   const hj=actifs.filter(k=>DATA[k]?.pct>0.5);if(hj.length)raisons.push(`Hausse du jour (${hj.length})`);
   if(s.H>=65)raisons.push(`Score fort : ${fmtScore(s.H)}/100`);
@@ -1449,12 +1453,14 @@ function renderGlobal(signals,NEWS,ms){
     const s=signals[m.key];const isVed=m.key===vedette.key;
     const sparkRows=m.keys.map((k,j)=>{
       const d=DATA[k];
-      const p5v=d?._p5!=null?d._p5:null,vv=d?._vol!=null?d._vol:null;
+      const vv=d?._vol!=null?d._vol:null;
+      const lev2=vv!=null?(vv*2).toFixed(1):null,lev3=vv!=null?(vv*3).toFixed(1):null;
+      const levCls=vv!=null?(vv>4?'r':vv>2?'a':'g'):'dim';
       return`<div class="spark-row">
         <span class="spark-name">${m.labels[j]}</span>
         <span class="spark-val ${pctCls(d?.pct)}">${d?.ok?fmtPct(d.pct):'—'}</span>
-        <span class="spark-val ${p5v!=null?pctCls(p5v):'dim'}">${p5v!=null?(p5v>=0?'+':'')+p5v.toFixed(1)+'%':'—'}</span>
         <span class="spark-val ${vv!=null?(vv>4?'r':vv>2?'a':'dim'):'dim'}">${vv!=null?vv.toFixed(1)+'%':'—'}</span>
+        <span class="spark-val ${levCls}" title="Amplitude théorique quotidienne sur produit à effet de levier">${lev2!=null?'±'+lev2+'/±'+lev3+'%':'—'}</span>
         <div>${sparklineSVG(d?.closes)}</div>
       </div>`;
     }).join('');
@@ -1493,8 +1499,8 @@ function renderGlobal(signals,NEWS,ms){
       ${miniQ?`<div class="mc-quotes-strip">${miniQ}</div>`:''}
       <div class="mc-body"><div class="mc-body-inner">
         <div class="card2">
-          <div class="card2-title">Actif · Jour · 5j · Vol · Historique</div>
-          <div class="spark-hdr"><span>Actif</span><span>Jour</span><span>5j</span><span>Vol</span><span>Évolution</span></div>
+          <div class="card2-title">Actif · Jour · Vol · Risque x2/x3 · Historique</div>
+          <div class="spark-hdr"><span>Actif</span><span>Jour</span><span>Vol</span><span>Risque x2/x3</span><span>Évolution</span></div>
           ${sparkRows}
         </div>
         ${whyHTML}
