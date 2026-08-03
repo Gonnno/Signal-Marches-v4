@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.32 — Refonte des graphiques d'évolution : échelle verticale fixe ±15% (au lieu d'un
+          auto-zoom sur le min/max propre à chaque actif) — un mouvement de 1% reste discret,
+          un vrai ±15% remplit le graphique. Corrige l'effet "toujours grossi" à la racine.
+          Colonnes du tableau resserrées sur mobile pour garantir une largeur visible au
+          graphique au lieu qu'il disparaisse faute de place.
   v4.31 — Correctif barre de défilement grisâtre/mal thémée sur Firefox : le site ne stylait
           la scrollbar qu'en CSS "webkit" (Chrome/Edge/Safari), ignoré par Firefox qui
           affichait sa barre native par défaut. Ajout de l'équivalent scrollbar-width/
@@ -138,7 +143,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.31</title>
+<title>Signal Marchés · v4.32</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -384,7 +389,8 @@ a{color:inherit;text-decoration:none;}
   .btn-analyze .btn-label{display:none;}
   .btn-analyze{padding:.5rem .75rem;}
   .mc-hor{display:none;}
-  .spark-hdr,.spark-row{grid-template-columns:minmax(60px,110px) 42px 42px 62px 1fr;gap:6px;}
+  .spark-hdr,.spark-row{grid-template-columns:minmax(46px,72px) 34px 34px 50px minmax(50px,1fr);gap:4px;}
+  .spark-hdr span,.spark-val{font-size:10px;}
   .footer .page-inner{flex-direction:column;gap:.3rem;}
 }
 @media(max-width:560px){
@@ -399,6 +405,8 @@ a{color:inherit;text-decoration:none;}
 }
 @media(max-width:420px){
   .fg-widget{grid-template-columns:1fr;justify-items:center;text-align:center;}
+  .card2{padding:.8rem .7rem;}
+  .spark-hdr,.spark-row{grid-template-columns:minmax(40px,60px) 30px 30px 44px minmax(46px,1fr);gap:3px;}
 }
 </style>
 </head>
@@ -407,7 +415,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.31</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.32</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1179,10 +1187,14 @@ function getMarketStatus(){
 }
 function sparklineSVG(closes){
   if(!closes||closes.length<2)return`<div class="spark-wrap"><svg class="spark-svg" viewBox="0 0 70 24"><line x1="0" y1="12" x2="70" y2="12" stroke="var(--sur3)" stroke-width="1"/></svg><span class="spark-note">historique en cours de constitution</span></div>`;
-  const rawMin=Math.min(...closes),rawMax=Math.max(...closes),rawRange=rawMax-rawMin||1;
-  const pad=rawRange*0.7;
-  const min=rawMin-pad,range=(rawRange+pad*2)||1;
-  const pts=closes.map((v,i)=>{const x=(i/(closes.length-1))*68+1;const y=22-((v-min)/range)*20+1;return`${x},${y}`;});
+  const base=closes[0]||1;
+  const FIXED_PCT=15; // échelle fixe ±15% — un mouvement de 1% reste discret, un vrai ±15% remplit le graphique
+  const pts=closes.map((v,i)=>{
+    const x=(i/(closes.length-1))*68+1;
+    const pct=Math.max(-FIXED_PCT,Math.min(FIXED_PCT,((v-base)/base)*100));
+    const y=12-(pct/FIXED_PCT)*10;
+    return`${x},${y}`;
+  });
   const c=closes.at(-1)>=closes[0]?'var(--gr)':'var(--rd)';
   const sparse=closes.length<30;
   const svg=`<svg class="spark-svg" viewBox="0 0 70 24" preserveAspectRatio="none"><polyline fill="none" stroke="${sparse?'var(--tx3)':c}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.join(' ')}"/></svg>`;
