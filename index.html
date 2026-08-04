@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.42 — Matières premières simplifié à "matières premières" (au lieu de la combinaison
+          enrichie), même logique que le lien Semi-conducteurs.
   v4.41 — Liens "Actualités du jour" : chaque catégorie peut désormais afficher plusieurs
           liens distincts au lieu d'un seul combiné. Semi-conducteurs garde 1 lien simple
           ("semi conducteurs") ; Pétrole & Énergie en a 3 : "Pétrole", "Détroit d'Ormuz" et
@@ -196,7 +198,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.41</title>
+<title>Signal Marchés · v4.42</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -462,7 +464,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.41</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.42</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1332,7 +1334,7 @@ const GNEWS_QUERIES={
   petrole:[{l:'Pétrole',q:'pétrole bourse'},{l:'Détroit d\'Ormuz',q:'ormuz'},{l:'Mer Noire',q:'"mer noire"'}],
   or:[{l:'Or & métaux',q:'or métaux précieux'}],
   crypto:[{l:'Crypto',q:'bitcoin crypto'}],
-  matieres:[{l:'Matières premières',q:'blé sécheresse récolte matières premières'}],
+  matieres:[{l:'Matières premières',q:'matières premières'}],
 };
 function gnewsLinks(key){
   const list=GNEWS_QUERIES[key]||[{l:'Marchés',q:'bourse marchés financiers'}];
