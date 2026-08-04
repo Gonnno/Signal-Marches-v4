@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.41 — Liens "Actualités du jour" : chaque catégorie peut désormais afficher plusieurs
+          liens distincts au lieu d'un seul combiné. Semi-conducteurs garde 1 lien simple
+          ("semi conducteurs") ; Pétrole & Énergie en a 3 : "Pétrole", "Détroit d'Ormuz" et
+          "Mer Noire", chacun sur sa propre requête ciblée plutôt qu'un OR fourre-tout.
   v4.40 — Requêtes "Actualités du jour" par catégorie rendues spécifiques au lieu de
           génériques : Pétrole cherche désormais "pétrole OR brut OR Hormuz OR OPEP OR
           Brent OR WTI énergie" (au lieu de "pétrole+bourse+énergie"), Matières premières
@@ -192,7 +196,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.40</title>
+<title>Signal Marchés · v4.41</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -458,7 +462,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.40</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.41</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1322,17 +1326,17 @@ const TR_LEVERAGE=[
   {n:'2x Lev Agriculture USD',lev:'x2',tags:['matieres'],dir:'bull',raison:'Exposition agricole large amplifiée x2 — blé, maïs, soja combinés.'},
 ];
 const GNEWS_QUERIES={
-  semi:'semi-conducteurs OR Nvidia OR TSMC OR ASML OR "export controls" OR Taïwan puces',
-  nasdaq:'Nasdaq OR "big tech" OR Apple OR Microsoft OR Fed OR "taux directeur" résultats',
-  europe:'CAC40 OR DAX OR "bourse Paris" OR BCE OR Euronext Europe',
-  petrole:'pétrole OR brut OR Hormuz OR OPEP OR Brent OR WTI énergie',
-  or:'or OR argent OR "métaux précieux" OR inflation Fed lingot',
-  crypto:'bitcoin OR crypto OR ethereum OR ETF OR halving ripple',
-  matieres:'blé OR "mer noire" OR Ukraine OR sécheresse OR café OR sucre récolte',
+  semi:[{l:'Semi-conducteurs',q:'semi conducteurs'}],
+  nasdaq:[{l:'Nasdaq / big tech',q:'Nasdaq big tech Apple Microsoft'}],
+  europe:[{l:'Bourse Europe',q:'CAC40 DAX bourse Europe BCE'}],
+  petrole:[{l:'Pétrole',q:'pétrole bourse'},{l:'Détroit d\'Ormuz',q:'ormuz'},{l:'Mer Noire',q:'"mer noire"'}],
+  or:[{l:'Or & métaux',q:'or métaux précieux'}],
+  crypto:[{l:'Crypto',q:'bitcoin crypto'}],
+  matieres:[{l:'Matières premières',q:'blé sécheresse récolte matières premières'}],
 };
-function gnewsUrl(key){
-  const q=GNEWS_QUERIES[key]||'bourse marchés financiers';
-  return`https://www.google.com/search?q=${encodeURIComponent(q)}&num=10&tbs=qdr%3Ad%2Csbd%3A1&tbm=nws`;
+function gnewsLinks(key){
+  const list=GNEWS_QUERIES[key]||[{l:'Marchés',q:'bourse marchés financiers'}];
+  return list.map(({l,q})=>({label:l,url:`https://www.google.com/search?q=${encodeURIComponent(q)}&num=10&tbs=qdr%3Ad%2Csbd%3A1&tbm=nws`}));
 }
 function selectionETF(key,sig,newsItems){
   const dir=sig==='ACHAT'?'bull':sig==='VENTE'?'bear':null;
@@ -1628,7 +1632,7 @@ function renderGlobal(signals,NEWS,ms){
         ${(s.sig==='ACHAT'||s.sig==='VENTE')?selectionETF(m.key,s.sig,_NEWS.filter(n=>_mktKw[m.key]?.test((n.titre||'')+(n.resume||''))).slice(0,5)):''}
         ${alertHTML}${warnHTML}
         ${s.nbBlocked>0?`<div class="info-box">🔒 ${s.nbBlocked}/${s.n} actif(s) avec filtre de sécurité actif</div>`:''}
-        <a href="${gnewsUrl(m.key)}" target="_blank" rel="noopener noreferrer" class="gnews-btn">↗ Actualités ${m.label} du jour (24h)</a>
+        ${gnewsLinks(m.key).map(g=>`<a href="${g.url}" target="_blank" rel="noopener noreferrer" class="gnews-btn">↗ ${g.label} — actus du jour (24h)</a>`).join('')}
       </div></div>
     </div>`;
   }).join('');
