@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.39 — Radar Volatilité entièrement refondu en "Top opportunités du moment" : au lieu
+          d'un classement fixe sur 12 ETF de niche, il scanne maintenant les 7 marchés
+          thématiques suivis, ne garde que les signaux ACHAT/VENTE clairs (jamais NEUTRE/
+          DANGER), et classe par confiance du signal + volatilité du jour. Chaque opportunité
+          affiche l'actif le plus actif de sa catégorie, le produit à effet de levier
+          correspondant si connu (long ou short selon le signal), et surtout l'actualité
+          réelle qui l'explique, citée directement — plus concret et actionnable qu'un
+          classement abstrait. Les 12 ETF radar désormais inutilisés (ARKK, TQQQ, SOXL…) ont
+          été retirés du suivi, économisant du temps de backfill en arrière-plan.
+  v4.38 — Retiré le basculement automatique vers Marchés au lancement d'une analyse (v4.24) :
+          l'onglet actif reste actif. La barre de chargement est déplacée hors des pages
+          spécifiques pour rester visible quel que soit l'onglet consulté pendant l'analyse.
   v4.37 — Bandeau défilant du haut retiré entièrement (HTML, JS, CSS). Colonne "Actif" du
           tableau replafonnée (elle était repassée en largeur libre "1fr" par erreur en
           v4.36, recréant le problème) : 70-140px maintenant. Colonne "Évolution" élargie à
@@ -173,7 +185,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.37</title>
+<title>Signal Marchés · v4.39</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -348,12 +360,14 @@ a{color:inherit;text-decoration:none;}
 .sum-card{background:var(--sur);border:1px solid var(--brd);border-radius:var(--radius);padding:1.05rem 1.2rem;margin-bottom:1.2rem;}
 .sum-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font:400 12px/1.7 'IBM Plex Sans',sans-serif;flex-wrap:wrap;}
 /* ── Radar ── */
-.radar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin-bottom:.6rem;}
-.radar-item{background:var(--sur2);border-radius:10px;padding:.7rem .8rem;}
-.radar-item-lbl{font:600 13px/1 'IBM Plex Sans',sans-serif;margin-bottom:.35rem;}
-.radar-item-vol{font:600 13px/1 'IBM Plex Mono',monospace;margin-bottom:.25rem;}
-.radar-item-sub{font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);}
-.radar-item-short{font:500 10.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--rd);margin-top:5px;}
+.opp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin-bottom:.6rem;}
+.opp-item{background:var(--sur2);border-radius:10px;padding:.75rem .85rem;}
+.opp-item-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;}
+.opp-item-cat{font:600 11.5px/1 'IBM Plex Sans',sans-serif;color:var(--tx2);}
+.opp-item-hot{font:400 13px/1.3 'IBM Plex Mono',monospace;color:var(--tx);margin-bottom:.35rem;}
+.opp-item-lev{font:500 11.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);margin-bottom:.4rem;}
+.opp-item-news{font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:var(--tx3);font-style:italic;padding-top:.35rem;border-top:1px solid var(--brd);}
+.opp-item-news.dim{color:var(--tx3);opacity:.6;font-style:normal;}
 /* ── News ── */
 .news-item{border-left:2px solid var(--brd2);padding:.5rem .8rem;margin-bottom:.4rem;border-radius:0 8px 8px 0;display:block;transition:opacity .15s,background .15s;background:var(--sur);border:1px solid var(--brd);border-left-width:3px;}
 .news-item:hover{opacity:.85;}
@@ -437,7 +451,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.37</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.39</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -454,13 +468,13 @@ a{color:inherit;text-decoration:none;}
       </div>
     </div>
     <div class="content" id="swipe-area">
+      <div class="ldr-wrap" id="ldr" style="display:none;">
+        <div class="ldr-bar"><div class="ldr-fill" id="lf"></div></div>
+        <div class="ldr-txt mono" id="lt">Initialisation…</div>
+      </div>
 
       <!-- PAGE: GLOBAL -->
       <div class="page active" id="page-global"><div class="page-inner">
-        <div class="ldr-wrap" id="ldr" style="display:none;">
-          <div class="ldr-bar"><div class="ldr-fill" id="lf"></div></div>
-          <div class="ldr-txt mono" id="lt">Initialisation…</div>
-        </div>
         <div id="sec-global">
           <div class="info-box" style="margin-top:0;">👋 Bienvenue — clique sur <b>Analyser</b> en haut à droite pour charger les cotations, indices mondiaux et actualités en temps réel.</div>
         </div>
@@ -796,11 +810,6 @@ const STOCKS_FH={
   'SAN.PA':{fh:'SAN',label:'Sanofi'},'BNP.PA':{fh:'BNP',label:'BNP Paribas'},'OR.PA':{fh:'OR',label:"L'Oréal"},
   WEAT:{fh:'WEAT',label:'Blé'},CORN:{fh:'CORN',label:'Maïs'},DBA:{fh:'DBA',label:'Agri ETF'},COPX:{fh:'COPX',label:'Cuivre/Mines'},
   JO:{fh:'KC1!',label:'Café'},SGG:{fh:'SB1!',label:'Sucre'},UNG:{fh:'UNG',label:'Gaz naturel'},
-  ARKK:{fh:'ARKK',label:'ARK Innov.',radar:true},ITA:{fh:'ITA',label:'Défense',radar:true},
-  ICLN:{fh:'ICLN',label:'Énergie propre',radar:true},XBI:{fh:'XBI',label:'Biotech',radar:true},HACK:{fh:'HACK',label:'Cybersécurité',radar:true},
-  TQQQ:{fh:'TQQQ',label:'Nasdaq ×3',radar:true},SOXL:{fh:'SOXL',label:'Semis ×3',radar:true},UVXY:{fh:'UVXY',label:'Vol. VIX',radar:true},
-  JETS:{fh:'JETS',label:'Airlines',radar:true},KWEB:{fh:'KWEB',label:'Tech Chine',radar:true},SMH:{fh:'SMH',label:'Semi-conducteurs',radar:true},
-  IBIT:{fh:'IBIT',label:'Bitcoin ETF',radar:true},
 };
 async function fetchStocks(h,meta){
   const keys=Object.keys(STOCKS_FH);
@@ -1177,18 +1186,36 @@ function computeSignal(keys,newsItems=[]){
   const reasonsBear=allReasons.filter(r=>r.dir==='bear').sort((a,b)=>b.w-a.w).slice(0,4);
   return{H,Htech,B:cl(100-H,5,95),sig,conf,confPct,newsDelta,n,alerts:allAlerts.slice(0,4),warnings:allWarnings.slice(0,3),reasons:{bull:reasonsBull,bear:reasonsBear},nbBlocked};
 }
-const RADAR_SHORT={TQQQ:{t:'SQQQ',d:'Nasdaq -3x'},SOXL:{t:'SOXS',d:'Semi-conducteurs -3x'},KWEB:{t:'YANG',d:'Chine tech -3x'}};
-function computeRadarVolatilite(){
-  const panel=Object.keys(STOCKS_FH).filter(k=>STOCKS_FH[k].radar);
-  return panel.map(k=>{
-    const d=DATA[k];if(!d?.ok)return null;
-    const{score,alerts,blocked}=scoreAsset(d);
-    const vol=d._vol!=null?d._vol:(d.pct!=null?Math.abs(d.pct):null);
-    const sig=blocked?(d._p5!=null&&d._p5<-8?'VENTE':'NEUTRE'):(score>=60?'ACHAT':score<=42?'VENTE':'NEUTRE');
-    const nbCrit=alerts.filter(a=>a.msg?.startsWith('🚨')).length;
-    const finalSig=nbCrit>=1?'DANGER':sig;
-    return{key:k,label:d.label,pct:d.pct,vol,p5:d._p5,score,sig:finalSig,alerts,hasHistory:d._vol!=null,short:(finalSig==='VENTE'||finalSig==='DANGER')?RADAR_SHORT[k]:null};
-  }).filter(Boolean).sort((a,b)=>(b.vol||0)-(a.vol||0)).slice(0,4);
+const CAT_META={
+  semi:{icon:'🔬',label:'Semi-conducteurs',keys:['NVDA','AMD','TSM','AVGO','ASML'],labels:{NVDA:'Nvidia',AMD:'AMD',TSM:'TSMC',AVGO:'Broadcom',ASML:'ASML'}},
+  petrole:{icon:'🛢️',label:'Pétrole & Énergie',keys:['USO','XOM','CVX','OXY'],labels:{USO:'USO/WTI',XOM:'ExxonMobil',CVX:'Chevron',OXY:'Occidental'}},
+  matieres:{icon:'🌾',label:'Matières premières',keys:['WEAT','JO','SGG','UNG','COPX'],labels:{WEAT:'Blé',JO:'Café',SGG:'Sucre',UNG:'Gaz naturel',COPX:'Cuivre'}},
+  or:{icon:'🥇',label:'Or & Métaux',keys:['GLD','SLV','GDX'],labels:{GLD:'GLD/Or',SLV:'SLV/Argent',GDX:'GDX/Minières'}},
+  europe:{icon:'🇪🇺',label:'Bourse Européenne',keys:['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],labels:{'TTE.PA':'TotalEnergies','AIR.PA':'Airbus','LVMH.PA':'LVMH','SAN.PA':'Sanofi','BNP.PA':'BNP','OR.PA':"L'Oréal"}},
+  nasdaq:{icon:'📈',label:'Nasdaq 100',keys:['QQQ','MSFT','AAPL','META','GOOG'],labels:{QQQ:'QQQ',MSFT:'Microsoft',AAPL:'Apple',META:'Meta',GOOG:'Alphabet'}},
+  crypto:{icon:'₿',label:'Crypto',keys:['BTC','ETH','SOL','XRP'],labels:{BTC:'Bitcoin',ETH:'Ethereum',SOL:'Solana',XRP:'XRP'}},
+};
+function computeTopOpportunities(signals,NEWS){
+  const opps=Object.keys(CAT_META).map(key=>{
+    const sv=signals[key];
+    if(!sv||(sv.sig!=='ACHAT'&&sv.sig!=='VENTE'))return null;
+    const meta=CAT_META[key];
+    let hot=null,hotVol=-1;
+    meta.keys.forEach(k=>{
+      const d=DATA[k];if(!d?.ok)return;
+      const v=d._vol!=null?d._vol:Math.abs(d.pct||0);
+      if(v>hotVol){hotVol=v;hot=k;}
+    });
+    if(!hot)return null;
+    const d=DATA[hot];
+    const dir=sv.sig==='ACHAT'?'bull':'bear';
+    const lev=TR_LEVERAGE.find(s=>s.tags.includes(key)&&s.dir===dir);
+    const news=(NEWS||[]).find(n=>_mktKw[key]?.test((n.titre||'')+(n.resume||'')));
+    const vol=hotVol<0?null:hotVol;
+    const actionScore=sv.confPct+(vol||0)*3;
+    return{key,meta,sv,hotKey:hot,hotLabel:meta.labels[hot]||d.label,d,vol,lev,news,actionScore};
+  }).filter(Boolean);
+  return opps.sort((a,b)=>b.actionScore-a.actionScore).slice(0,4);
 }
 function getMarketStatus(){
   const utc=Date.now()+new Date().getTimezoneOffset()*60000;
@@ -1342,7 +1369,7 @@ function computeIndicators(){
   });
 }
 function computeSignals(NEWS){
-  return{
+  const s={
     semi:computeSignal(['NVDA','AMD','TSM','AVGO','ASML'],NEWS.filter(n=>_mktKw.semi.test((n.titre||'')+(n.resume||'')))),
     nasdaq:computeSignal(['QQQ','MSFT','AAPL','META','GOOG'],NEWS.filter(n=>_mktKw.nasdaq.test((n.titre||'')+(n.resume||'')))),
     europe:computeSignal(['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],NEWS.filter(n=>_mktKw.europe.test((n.titre||'')+(n.resume||'')))),
@@ -1350,8 +1377,9 @@ function computeSignals(NEWS){
     or:computeSignal(['GLD','SLV','GDX'],NEWS.filter(n=>_mktKw.or.test((n.titre||'')+(n.resume||'')))),
     crypto:computeSignal(['BTC','ETH','SOL','XRP'],NEWS.filter(n=>_mktKw.crypto.test((n.titre||'')+(n.resume||'')))),
     matieres:computeSignal(['WEAT','JO','SGG','UNG','COPX'],NEWS.filter(n=>_mktKw.matieres.test((n.titre||'')+(n.resume||'')))),
-    radar:computeRadarVolatilite(),
   };
+  s.radar=computeTopOpportunities(s,NEWS);
+  return s;
 }
 function recomputeAndRender(){
   computeIndicators();
@@ -1403,7 +1431,6 @@ async function backfillHistoryInBackground(h,meta){
 async function analyserTout(){
   if(_isRunning)return;
   _isRunning=true;
-  gotoPage('global');
   const btn=document.getElementById('btn'),ldr=document.getElementById('ldr');
   btn.disabled=true;btn.style.opacity='.5';ldr.style.display='block';
   document.getElementById('sec-global').innerHTML='';
@@ -1482,7 +1509,7 @@ function renderGlobal(signals,NEWS,ms){
     {key:'europe',icon:'🇪🇺',label:'Bourse Européenne',sub:'TotalEnergies · Airbus · LVMH · Sanofi · BNP',open:ms.europe,horaire:'Euronext 9h–17h30',keys:['TTE.PA','AIR.PA','LVMH.PA','SAN.PA','BNP.PA','OR.PA'],labels:['TotalEnergies','Airbus','LVMH','Sanofi','BNP',"L'Oréal"]},
     {key:'nasdaq',icon:'📈',label:'Nasdaq 100',sub:'QQQ · MSFT · Apple · Meta · Alphabet',open:ms.nasdaq,horaire:'Nasdaq 15h30–22h',keys:['QQQ','MSFT','AAPL','META','GOOG'],labels:['QQQ','Microsoft','Apple','Meta','Alphabet']},
     {key:'crypto',icon:'₿',label:'Crypto',sub:'Bitcoin · Ethereum · Solana · XRP',open:ms.crypto,horaire:'24h / 7j',keys:['BTC','ETH','SOL','XRP'],labels:['Bitcoin','Ethereum','Solana','XRP']},
-    {key:'radar',icon:'⚡',label:'Radar Volatilité',sub:'Scan auto — ETF les plus agités',open:ms.nasdaq,horaire:'NYSE 15h30–22h',keys:[],labels:[],isRadar:true},
+    {key:'radar',icon:'⚡',label:'Top opportunités du moment',sub:'Scan de tous les marchés suivis — signaux clairs + forte volatilité',open:ms.nasdaq,horaire:'Multi-marchés',keys:[],labels:[],isRadar:true},
   ];
   const {vedette,s:sv,raisons,miniActifs}=choisirVedette(MKTS,signals);
   const fgHTML=fgGaugeHTML(computeFG(signals));
@@ -1507,32 +1534,29 @@ function renderGlobal(signals,NEWS,ms){
   const cards=MKTS.map(m=>{
     if(m.isRadar){
       const top=signals.radar||[];if(!top.length)return'';
-      const avgVol=top.length?top.reduce((a,r)=>a+(r.vol||0),0)/top.length:0;
-      const radarItems=top.map((r,i)=>{
-        const cls=r.vol==null?'dim':r.vol>4?'r':r.vol>2?'a':'g';
-        const volTxt=r.vol!=null?`${r.hasHistory?'':'~'}${r.vol.toFixed(1)}%/j`:'—';
-        return`<div class="radar-item">
-          <div class="radar-item-lbl">${['🥇','🥈','🥉','4·'][i]||''} ${r.label}</div>
-          <div class="radar-item-vol ${cls}">${volTxt}</div>
-          <div class="radar-item-sub"><span class="${pctCls(r.pct)}">${fmtPct(r.pct)} jour</span> · <span class="badge ${badgeCls(r.sig)}" style="font-size:8px;padding:1px 5px;">${r.sig}</span></div>
-          ${r.short?`<div class="radar-item-short">↓ Inversé — short possible : <b>${r.short.t}</b> (${r.short.d})</div>`:''}
+      const items=top.map(o=>{
+        const volCls=o.vol==null?'dim':o.vol>4?'r':o.vol>2?'a':'g';
+        const volTxt=o.vol!=null?`${o.vol.toFixed(1)}%/j`:'—';
+        const newsTxt=o.news?.titre?`« ${o.news.titre.slice(0,90)}${o.news.titre.length>90?'…':''} »`:'';
+        return`<div class="opp-item">
+          <div class="opp-item-top">
+            <span class="opp-item-cat">${o.meta.icon} ${o.meta.label}</span>
+            <span class="badge ${badgeCls(o.sv.sig)}" style="font-size:9px;padding:2px 7px;">${o.sv.sig}</span>
+          </div>
+          <div class="opp-item-hot"><b>${o.hotLabel}</b> <span class="${pctCls(o.d.pct)}">${fmtPct(o.d.pct)}</span> · <span class="${volCls}">vol ${volTxt}</span></div>
+          ${o.lev?`<div class="opp-item-lev">${o.lev.dir==='bear'?'↓':'↑'} ${o.lev.n} <span class="badge" style="font-size:8px;padding:1px 6px;background:${o.lev.dir==='bear'?'var(--rd-dim)':'var(--gr-dim)'};color:${o.lev.dir==='bear'?'var(--rd)':'var(--gr)'};margin-left:4px;">${o.lev.lev}</span></div>`:''}
+          ${newsTxt?`<div class="opp-item-news">📰 ${newsTxt}</div>`:'<div class="opp-item-news dim">Aucune actualité récente liée</div>'}
         </div>`;
       }).join('');
-      const avgCls=avgVol>4?'r':avgVol>2?'a':avgVol>0?'g':'dim';
-      const radarReco=avgVol>4?'🚨 Volatilité extrême — aucune position recommandée.':avgVol>2.5?'⚠ Volatilité élevée — positions courtes uniquement, stop serré.':'✓ Volatilité modérée — opportunités tactiques possibles.';
-      const nbShort=top.filter(r=>r.short).length;
-      const shortReco=nbShort?`<div class="reco" style="color:var(--rd);">↓ ${nbShort} marché${nbShort>1?'s':''} inversé${nbShort>1?'s':''} détecté${nbShort>1?'s':''} — un produit short existe pour en profiter (voir détail ci-dessus).</div>`:'';
       return`<div class="mc" id="mc-radar" onclick="toggleMC('radar')">
         <div class="mc-head">
-          <div class="mc-status"><div class="mc-dot on"></div><span class="mc-dlabel on">SCAN</span><span class="mc-hor">${top.length} actifs</span></div>
-          <div><div class="mc-label">${m.icon} ${m.label}</div><div class="mc-sig ${avgCls}">${avgVol.toFixed(1)}%/j moy.</div><div class="mc-sub">${m.sub}</div></div>
+          <div class="mc-status"><div class="mc-dot on"></div><span class="mc-dlabel on">SCAN</span><span class="mc-hor">${top.length} opportunité${top.length>1?'s':''}</span></div>
+          <div><div class="mc-label">${m.icon} ${m.label}</div><div class="mc-sig g">${top.length} signal${top.length>1?'aux':''} actionnable${top.length>1?'s':''}</div><div class="mc-sub">${m.sub}</div></div>
           <div class="mc-right"><span class="mc-arrow">▼</span></div>
         </div>
         <div class="mc-body"><div class="mc-body-inner">
-          <div class="radar-grid">${radarItems}</div>
-          <div class="reco">→ ${radarReco}</div>
-          ${shortReco}
-          <div class="info-box">Ces ETF US servent uniquement au signal de volatilité — ils ne sont pas nécessairement disponibles chez tous les courtiers. Utilise les sélections de la carte thématique correspondante.</div>
+          <div class="opp-grid">${items}</div>
+          <div class="info-box">Combine le signal technique de chaque marché suivi avec sa volatilité du jour et l'actualité qui l'explique — seuls les signaux ACHAT/VENTE clairs apparaissent ici (jamais NEUTRE/DANGER). ⚠ Produits à effet de levier — vérifie le nom exact chez ton courtier.</div>
         </div></div>
       </div>`;
     }
