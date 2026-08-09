@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.20 — Correctif important : changer de marché (Pétrole ↔ Semi-conducteurs) ne vidait
+          pas les champs "clôture vendredi"/"dernier prix", donc les valeurs saisies pour un
+          instrument (ex. WTI ~77-84$) restaient appliquées au calcul d'un autre (Nasdaq
+          futures, échelle de prix totalement différente), produisant un résultat identique
+          et non pertinent dans les deux cas. Les champs se vident maintenant à chaque
+          changement de marché.
   v4.5.19 — Détection automatique des actus réintégrée dans le score de confiance (au moins
           un article pertinent trouvé dans l'onglet Actus = +20 points), sans case à cocher
           manuelle — le score combine à nouveau deux facteurs (Asie + actus) au lieu d'un
@@ -315,7 +321,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.19</title>
+<title>Signal Marchés · v4.5.20</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -600,7 +606,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.19</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.20</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -676,7 +682,7 @@ a{color:inherit;text-decoration:none;}
           <div class="card2-title">1 · Sous-jacent & produit</div>
           <div class="estim-row">
             <label class="estim-lbl">Marché</label>
-            <select id="estim-market" class="estim-input" onchange="updateEstimAuto();renderGapHistory();">
+            <select id="estim-market" class="estim-input" onchange="onEstimMarketChange();">
               <option value="petrole">Pétrole (WTI)</option>
               <option value="semi">Semi-conducteurs (proxy Nasdaq)</option>
             </select>
@@ -1970,6 +1976,16 @@ function isEuroProductClosed(){
   const h=((parisH%24)+24)%24;
   // Produit coté LSE/Xetra (ex. WisdomTree WTI 3x) : ferme vendredi ~17h30, rouvre lundi ~9h heure de Paris
   return(d===5&&h>=17.5)||d===6||d===0||(d===1&&h<9);
+}
+function onEstimMarketChange(){
+  const closeInput=document.getElementById('estim-close');
+  const lastInput=document.getElementById('estim-last');
+  if(closeInput)closeInput.value='';
+  if(lastInput)lastInput.value='';
+  const closeNote=document.getElementById('estim-close-note');
+  if(closeNote)closeNote.dataset.set='';
+  updateEstimAuto();
+  renderGapHistory();
 }
 function updateEstimAuto(){
   const sel=document.getElementById('estim-market');if(!sel)return;
