@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.24 — Ajout d'un champ optionnel "Prix du produit vendredi" qui projette un prix
+          d'ouverture estimé (long et short) à partir du % calculé, appliqué au bon prix (le
+          produit lui-même, pas le WTI) — évite de mélanger les deux échelles de prix par
+          erreur. Champ vidé au changement de marché, comme les autres.
   v4.5.23 — Texte d'intro de l'onglet Estimation clarifié : un lien fermé affiche quand même
           le dernier prix (figé, celui de vendredi), utilisable directement pour "Clôture
           vendredi". Précisé que le WTI est un contrat unique mondial sans version distincte
@@ -333,7 +337,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.23</title>
+<title>Signal Marchés · v4.5.24</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -618,7 +622,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.23</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.24</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -726,6 +730,11 @@ a{color:inherit;text-decoration:none;}
         <div class="card2">
           <div class="card2-title">4 · Estimation</div>
           <div id="estim-result"><div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div></div>
+          <div class="estim-row" style="margin-top:.5rem;">
+            <label class="estim-lbl">Prix du produit vendredi (optionnel, ton relevé courtier) <span style="display:block;color:var(--tx3);font-size:10px;margin-top:2px;">pour projeter un prix d'ouverture — ne pas confondre avec le prix WTI ci-dessus, échelle différente</span></label>
+            <input type="number" step="0.0001" id="estim-product-price" class="estim-input" placeholder="ex. 28.81" oninput="computeEstimation()">
+          </div>
+          <div id="estim-product-result"></div>
         </div>
 
         <div class="card2">
@@ -1993,8 +2002,10 @@ function isEuroProductClosed(){
 function onEstimMarketChange(){
   const closeInput=document.getElementById('estim-close');
   const lastInput=document.getElementById('estim-last');
+  const prodInput=document.getElementById('estim-product-price');
   if(closeInput)closeInput.value='';
   if(lastInput)lastInput.value='';
+  if(prodInput)prodInput.value='';
   const closeNote=document.getElementById('estim-close-note');
   if(closeNote)closeNote.dataset.set='';
   updateEstimAuto();
@@ -2079,6 +2090,17 @@ function computeEstimation(){
     <div style="font:400 12px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);">Produit x3 <b>long</b> — pour un produit <b>short</b>, inverse simplement le signe (${estim>=0?'−':'+'}${Math.abs(estim).toFixed(1)}%)</div>
     <div class="estim-conf" style="background:${confBg};color:${confColor};">Score de confiance ${confPct}% (heuristique, pas une probabilité statistique)${asiaTotal?` · Asie ${asiaSameSign}/${asiaTotal} dans le même sens`:''}${hasNews?' · actu détectée (onglet Actus)':''}</div>`;
   logEstimation(mk,estim);
+  const prodBox=document.getElementById('estim-product-result');
+  if(prodBox){
+    const prodPrice=parseFloat(document.getElementById('estim-product-price')?.value);
+    if(prodPrice>0){
+      const projLong=prodPrice*(1+estim/100);
+      const projShort=prodPrice*(1-estim/100);
+      prodBox.innerHTML=`<div class="info-box" style="margin-top:.5rem;">Projection à partir de ${prodPrice} : <b>produit long ≈ ${projLong.toFixed(4)}</b> · <b>produit short ≈ ${projShort.toFixed(4)}</b> (${prodPrice} × (1${estim>=0?'+':''}${(estim/100).toFixed(4)})) — ordre de grandeur, pas un prix garanti (voir limites méthodologiques ci-dessous).</div>`;
+    }else{
+      prodBox.innerHTML='';
+    }
+  }
 }
 function loadEstimLog(){try{return JSON.parse(localStorage.getItem('smv4_estim_log')||'[]')}catch{return[]}}
 function saveEstimLog(l){try{localStorage.setItem('smv4_estim_log',JSON.stringify(l))}catch{}}
