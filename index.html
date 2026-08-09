@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.23 — Texte d'intro de l'onglet Estimation clarifié : un lien fermé affiche quand même
+          le dernier prix (figé, celui de vendredi), utilisable directement pour "Clôture
+          vendredi". Précisé que le WTI est un contrat unique mondial sans version distincte
+          par région — le prix relevé juste avant l'ouverture de la bourse locale intègre
+          donc tout le mouvement accumulé depuis vendredi, y compris la session asiatique.
+  v4.5.22 — Remplacé "Vider le suivi" (effacement complet) par une petite corbeille sur
+          chaque ligne du journal — suppression individuelle plutôt que tout perdre d'un
+          coup.
+  v4.5.21 — Ajout d'un bouton "Vider le suivi" pour effacer d'un coup les entrées du journal
+          de fiabilité — utile après un bug corrigé (les anciennes entrées restent affichées
+          tant que le même marché n'est pas recalculé le même jour) ou simplement pour
+          repartir de zéro.
   v4.5.20 — Correctif important : changer de marché (Pétrole ↔ Semi-conducteurs) ne vidait
           pas les champs "clôture vendredi"/"dernier prix", donc les valeurs saisies pour un
           instrument (ex. WTI ~77-84$) restaient appliquées au calcul d'un autre (Nasdaq
@@ -321,7 +333,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.20</title>
+<title>Signal Marchés · v4.5.23</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -606,7 +618,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.20</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.23</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -674,8 +686,9 @@ a{color:inherit;text-decoration:none;}
       <div class="page" id="page-estim"><div class="page-inner">
         <div class="section-title">Estimation du gap d'ouverture<span class="line"></span></div>
         <div class="info-box" style="margin-top:0;">📐 Estime la variation probable d'un produit à levier avant l'ouverture, à partir du mouvement du sous-jacent pendant la fermeture (vendredi soir → lundi matin). <b>Ordre de grandeur, pas une prédiction</b> — les données marquées "saisie manuelle" ne sont pas disponibles gratuitement en direct, à toi de les relever chez ton courtier ou sur Investing.com/Barchart/TradingView.
-          <br><br>⏱ <b>Le WTI (CME Globex) ferme réellement vendredi ~23h et rouvre dimanche ~minuit-1h (heure de Paris, selon saison)</b> — avant ça, aucune source ne peut afficher de prix, ce n'est pas une limite de l'outil. Après réouverture, un léger écart entre deux sites (contrat différent, décalage de cotation) est normal, pas une erreur.
-          <br><br>⚠ <b>Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis.</b> Il ne bouge que pendant les heures européennes (~9h-17h30 Paris) et ne reflète le mouvement du week-end qu'à son ouverture lundi matin — même si le WTI lui-même a déjà bougé depuis dimanche soir. Pour la meilleure estimation, relève le "dernier prix connu" du WTI juste avant l'ouverture de la bourse européenne, pas juste après la réouverture du CME.
+          <br><br>⏱ <b>Le WTI (CME Globex) ferme réellement vendredi ~23h et rouvre dimanche ~minuit-1h (heure de Paris, selon saison)</b> — avant réouverture, les liens affichent quand même un prix : c'est celui de vendredi, figé (souvent marqué "marché fermé"). Tu peux t'en servir directement pour "Clôture vendredi" sans passer par le lien "historique" séparé.
+          <br><br>✓ <b>Le WTI est un contrat unique mondial, sans version distincte pour l'Asie.</b> Il continue de coter en continu pendant la session asiatique puis européenne, sur le même lien. Le prix relevé juste avant l'ouverture de ta bourse (ex. ~7h30-9h Paris selon l'exchange) intègre donc tout le mouvement accumulé depuis vendredi soir — c'est le gap précis, pas une approximation.
+          <br><br>⚠ <b>Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis.</b> Il ne bouge que pendant les heures européennes et ne reflète le mouvement du week-end qu'à son ouverture — même si le WTI lui-même a déjà bougé depuis dimanche soir. Relève le "dernier prix connu" du WTI juste avant l'ouverture de ta bourse pour la meilleure estimation.
           <br><br>⚠ <b>Le WTI affiché sur les liens ci-dessous (contrat générique/front-month) ne correspond pas exactement à l'indice que suit le produit à effet de levier.</b> Ces ETC suivent un indice Solactive avec son propre calendrier de roulement (2ᵉ contrat à terme), sont cotés en EUR/GBP (écart de change USD non pris en compte ici) et prélèvent des frais quotidiens. Le calcul reste donc un <b>ordre de grandeur du sens et de l'ampleur</b>, pas une valeur qui matchera exactement le prix réel du produit à l'ouverture.</div>
 
         <div class="card2">
@@ -2069,6 +2082,12 @@ function computeEstimation(){
 }
 function loadEstimLog(){try{return JSON.parse(localStorage.getItem('smv4_estim_log')||'[]')}catch{return[]}}
 function saveEstimLog(l){try{localStorage.setItem('smv4_estim_log',JSON.stringify(l))}catch{}}
+function deleteEstimLogRow(i){
+  const log=loadEstimLog();
+  log.splice(i,1);
+  saveEstimLog(log);
+  renderEstimLog();
+}
 function logEstimation(mk,estim){
   const today=new Date().toISOString().slice(0,10);
   const log=loadEstimLog();
@@ -2134,14 +2153,15 @@ function renderEstimLog(){
   }
   const rows=log.map((e,i)=>{
     const ecart=e.reel!=null?`<span class="${Math.abs(e.reel-e.estim)<1?'g':'r'}">${(e.reel-e.estim>=0?'+':'')}${(e.reel-e.estim).toFixed(1)}pt</span>`:'';
-    return`<div class="estim-log-row">
+    return`<div class="estim-log-row" style="grid-template-columns:1fr 1fr 1fr 1fr 26px;">
       <span>${e.date}</span>
       <span>${e.market} ${e.lev}</span>
       <span class="${e.estim>=0?'g':'r'}">${e.estim>=0?'+':''}${e.estim}%</span>
       <span style="display:flex;align-items:center;gap:6px;"><input type="number" step="0.1" class="estim-input" style="width:70px;max-width:none;padding:.3rem .4rem;" placeholder="réel %" value="${e.reel!=null?e.reel:''}" onchange="updateEstimLogReel(${i},this.value)">${ecart}</span>
+      <button onclick="deleteEstimLogRow(${i})" title="Supprimer cette ligne" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px;">🗑</button>
     </div>`;
   }).join('');
-  el.innerHTML=statsHtml+`<div class="estim-log-row estim-log-hdr"><span>Date</span><span>Produit</span><span>Estimation</span><span>Réel / écart</span></div>${rows}`;
+  el.innerHTML=statsHtml+`<div class="estim-log-row estim-log-hdr" style="grid-template-columns:1fr 1fr 1fr 1fr 26px;"><span>Date</span><span>Produit</span><span>Estimation</span><span>Réel / écart</span><span></span></div>${rows}`;
 }
 
 function renderLinks(){
