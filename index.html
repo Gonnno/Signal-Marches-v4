@@ -1,6 +1,34 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.15 — Nouvelle section "Historique des gaps clôture → ouverture" dans l'onglet
+          Estimation : entièrement automatique, sans saisie manuelle. Twelve Data et le
+          repli Alpha Vantage renvoient déjà le prix d'ouverture de chaque jour en plus de
+          la clôture (jusque-là ignoré) — désormais capturé et stocké. Affiche pour chaque
+          jour de l'historique local (~1 mois) le gap clôture→ouverture suivante en %, que
+          ce soit un jour de semaine ou un week-end (repéré séparément), avec une moyenne
+          globale et une moyenne week-end pour situer un futur gap par rapport à la norme
+          observée.
+  v4.5.14 — Correctif méthodologique : la clôture vendredi auto-remplie venait de l'historique
+          interne (USO, un ETF) alors que le "dernier prix" est relevé manuellement sur les
+          futures WTI (instrument différent) — comparaison incohérente. Ajout d'un lien vers
+          l'historique du même instrument (Investing.com) pour relever les deux prix au même
+          endroit ; le préremplissage automatique est désormais explicitement présenté comme
+          une suggestion à remplacer, pas une valeur fiable en l'état. Confirmé : les indices
+          asiatiques utilisés (Nikkei, Hang Seng, Taïwan, Corée) servent uniquement de signal
+          directionnel (% de variation), aucune comparaison de niveau de prix n'est faite,
+          donc pas de problème d'équivalence de devise à ce niveau.
+  v4.5.13 — Ajout d'une mise en garde méthodologique explicite : le WTI affiché sur les liens
+          de vérification (contrat générique/front-month) ne correspond pas exactement à
+          l'indice Solactive suivi par les ETC à effet de levier (roulement sur le 2ᵉ
+          contrat, cotation EUR/GBP sans ajustement de change, frais quotidiens). Le calcul
+          reste un ordre de grandeur du sens et de l'ampleur, pas une valeur exacte.
+  v4.5.12 — Deux garde-fous ajoutés dans l'onglet Estimation : (1) le préremplissage
+          automatique de la clôture vendredi compare désormais la valeur stockée au prix
+          actuel en direct, et n'auto-remplit plus si l'écart dépasse 20% (valeur signalée
+          comme suspecte à la place) ; (2) le calcul refuse d'afficher une estimation si la
+          variation dépasse ±15%, jugée quasi certainement due à une donnée fausse plutôt
+          qu'à un vrai mouvement de marché.
   v4.5.11 — Lien Trade Republic retiré de l'onglet Liens, section "Courtage" supprimée
           (devenue vide).
   v4.5.10 — Retrait des références personnelles dans les commentaires du code source (mention
@@ -265,7 +293,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.11</title>
+<title>Signal Marchés · v4.5.15</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -550,7 +578,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.11</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.15</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -619,13 +647,14 @@ a{color:inherit;text-decoration:none;}
         <div class="section-title">Estimation du gap d'ouverture<span class="line"></span></div>
         <div class="info-box" style="margin-top:0;">📐 Estime la variation probable d'un produit à levier avant l'ouverture, à partir du mouvement du sous-jacent pendant la fermeture (vendredi soir → lundi matin). <b>Ordre de grandeur, pas une prédiction</b> — les données marquées "saisie manuelle" ne sont pas disponibles gratuitement en direct, à toi de les relever chez ton courtier ou sur Investing.com/Barchart/TradingView.
           <br><br>⏱ <b>Le WTI (CME Globex) ferme réellement vendredi ~23h et rouvre dimanche ~minuit-1h (heure de Paris, selon saison)</b> — avant ça, aucune source ne peut afficher de prix, ce n'est pas une limite de l'outil. Après réouverture, un léger écart entre deux sites (contrat différent, décalage de cotation) est normal, pas une erreur.
-          <br><br>⚠ <b>Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis.</b> Il ne bouge que pendant les heures européennes (~9h-17h30 Paris) et ne reflète le mouvement du week-end qu'à son ouverture lundi matin — même si le WTI lui-même a déjà bougé depuis dimanche soir. Pour la meilleure estimation, relève le "dernier prix connu" du WTI juste avant l'ouverture de la bourse européenne, pas juste après la réouverture du CME.</div>
+          <br><br>⚠ <b>Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis.</b> Il ne bouge que pendant les heures européennes (~9h-17h30 Paris) et ne reflète le mouvement du week-end qu'à son ouverture lundi matin — même si le WTI lui-même a déjà bougé depuis dimanche soir. Pour la meilleure estimation, relève le "dernier prix connu" du WTI juste avant l'ouverture de la bourse européenne, pas juste après la réouverture du CME.
+          <br><br>⚠ <b>Le WTI affiché sur les liens ci-dessous (contrat générique/front-month) ne correspond pas exactement à l'indice que suit le produit à effet de levier.</b> Ces ETC suivent un indice Solactive avec son propre calendrier de roulement (2ᵉ contrat à terme), sont cotés en EUR/GBP (écart de change USD non pris en compte ici) et prélèvent des frais quotidiens. Le calcul reste donc un <b>ordre de grandeur du sens et de l'ampleur</b>, pas une valeur qui matchera exactement le prix réel du produit à l'ouverture.</div>
 
         <div class="card2">
           <div class="card2-title">1 · Sous-jacent & produit</div>
           <div class="estim-row">
             <label class="estim-lbl">Marché</label>
-            <select id="estim-market" class="estim-input" onchange="updateEstimAuto()">
+            <select id="estim-market" class="estim-input" onchange="updateEstimAuto();renderGapHistory();">
               <option value="petrole">Pétrole (WTI)</option>
               <option value="semi">Semi-conducteurs (proxy Nasdaq)</option>
             </select>
@@ -639,13 +668,14 @@ a{color:inherit;text-decoration:none;}
         </div>
 
         <div class="card2">
-          <div class="card2-title">3 · Données</div>
+          <div class="card2-title">3 · Données <span style="color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0;">— pour un calcul cohérent, relève les deux prix ci-dessous sur le même site/instrument (voir liens)</span></div>
           <div class="estim-row">
             <label class="estim-lbl">Clôture vendredi du sous-jacent <span id="estim-close-note" style="display:block;color:var(--tx3);font-size:10px;margin-top:2px;"></span></label>
             <input type="number" step="0.01" id="estim-close" class="estim-input" placeholder="auto" oninput="computeEstimation()">
           </div>
+          <div id="estim-hist-link" class="estim-links-row"></div>
           <div class="estim-row">
-            <label class="estim-lbl">Dernier prix connu avant ouverture <span style="display:block;color:var(--tx3);font-size:10px;margin-top:2px;">manuel — notre proxy US ne cote pas le week-end, contrairement aux futures</span></label>
+            <label class="estim-lbl">Dernier prix connu avant ouverture <span style="display:block;color:var(--tx3);font-size:10px;margin-top:2px;">manuel — à relever sur le même site que la clôture vendredi ci-dessus, pour comparer le même instrument</span></label>
             <input type="number" step="0.01" id="estim-last" class="estim-input" placeholder="ex. 66.90" oninput="computeEstimation()">
           </div>
           <div id="estim-price-links" class="estim-links-row"></div>
@@ -670,7 +700,12 @@ a{color:inherit;text-decoration:none;}
         </div>
 
         <div class="card2">
-          <div class="card2-title">5 · Suivi de fiabilité (tes estimations passées)</div>
+          <div class="card2-title">5 · Historique des gaps clôture → ouverture (auto, ~1 mois)</div>
+          <div id="estim-gap-hist"></div>
+        </div>
+
+        <div class="card2">
+          <div class="card2-title">6 · Suivi de fiabilité (tes estimations passées)</div>
           <div id="estim-log"></div>
         </div>
 
@@ -763,7 +798,7 @@ function gotoPage(name){
   document.querySelectorAll('.tb-nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
   document.getElementById('tb-'+name)?.classList.add('active');
-  if(name==='estim'){updateEstimAuto();renderEstimLog();}
+  if(name==='estim'){updateEstimAuto();renderEstimLog();renderGapHistory();}
 }
 function gotoPageMobile(name){gotoPage(name);window.scrollTo({top:0,behavior:'smooth'});}
 (function(){
@@ -866,9 +901,9 @@ function pushAndGet(h,k,price,prevClose){
 function mergeCandles(h,k,candles){
   if(!candles?.length)return;
   if(!h[k])h[k]=[];
-  const existing=new Set(h[k].map(e=>e.d));
-  const toAdd=candles.filter(c=>!existing.has(c.d)&&c.c>0);
-  h[k]=[...h[k],...toAdd].sort((a,b)=>a.d.localeCompare(b.d));
+  const existing=new Map(h[k].map(e=>[e.d,e]));
+  candles.forEach(c=>{if(c.c>0)existing.set(c.d,{...existing.get(c.d),...c});});
+  h[k]=[...existing.values()].sort((a,b)=>a.d.localeCompare(b.d));
   if(h[k].length>60)h[k]=h[k].slice(-60);
 }
 /* ── Limiteur Twelve Data : plan gratuit = 8 req/min, on sérialise avec ~7.6s d'écart ── */
@@ -900,7 +935,7 @@ async function fetchCandles(tdSym,localKey,h,meta){
         if(!r.ok)return false;
         const d=await r.json();
         if(!d.values?.length||d.status?.includes('error')||d.code)return false;
-        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
+        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close,o:+v.open})).filter(c=>c.c>0);
         mergeCandles(h,localKey,candles);
         meta[localKey]=today;
         return true;
@@ -916,7 +951,7 @@ async function fetchCandles(tdSym,localKey,h,meta){
         const d=await r.json();
         const series=d['Time Series (Daily)'];
         if(series&&!d.Note&&!d.Information){
-          const candles=Object.entries(series).map(([date,v])=>({d:date,c:+v['4. close']})).filter(c=>c.c>0);
+          const candles=Object.entries(series).map(([date,v])=>({d:date,c:+v['4. close'],o:+v['1. open']})).filter(c=>c.c>0);
           mergeCandles(h,localKey,candles);
           meta[localKey]=today;
         }
@@ -939,7 +974,7 @@ async function fetchCryptoCandles(tdSym,localKey,h,meta){
         if(!r.ok)return false;
         const d=await r.json();
         if(!d.values?.length||d.status?.includes('error')||d.code)return false;
-        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close})).filter(c=>c.c>0);
+        const candles=d.values.map(v=>({d:v.datetime.slice(0,10),c:+v.close,o:+v.open})).filter(c=>c.c>0);
         mergeCandles(h,localKey,candles);
         meta[localKey]=today;
         return true;
@@ -1905,9 +1940,11 @@ const LIENS={
 /* ── Outil : estimation du gap d'ouverture ── */
 const ESTIM_MARKETS={
   petrole:{label:'WTI / Pétrole',refKey:'USO',refLabel:'USO (proxy WTI)',asia:[['wNIKKEI','Nikkei'],['wCHINA','Hang Seng']],newsCat:'petrole',
-    links:[{l:'WTI — Investing.com',u:'https://www.investing.com/commodities/crude-oil'},{l:'WTI — Barchart',u:'https://www.barchart.com/futures/quotes/CL*0'},{l:'WTI — TradingView',u:'https://www.tradingview.com/symbols/NYMEX-CL1!/'}]},
+    links:[{l:'WTI — Investing.com',u:'https://www.investing.com/commodities/crude-oil'},{l:'WTI — Barchart',u:'https://www.barchart.com/futures/quotes/CL*0'},{l:'WTI — TradingView',u:'https://www.tradingview.com/symbols/NYMEX-CL1!/'}],
+    histLink:{l:'Clôture WTI vendredi — historique Investing.com',u:'https://www.investing.com/commodities/crude-oil-historical-data'}},
   semi:{label:'Semi-conducteurs (proxy Nasdaq futures)',refKey:'NVDA',refLabel:'Nvidia (repère semi)',asia:[['wTAIWAN','Taïwan'],['wKOSPI','Corée'],['wNIKKEI','Nikkei']],newsCat:'semi',
-    links:[{l:'Nasdaq Futures — Investing.com',u:'https://www.investing.com/indices/nq-100-futures'},{l:'Nasdaq Futures — TradingView',u:'https://www.tradingview.com/symbols/CME_MINI-NQ1!/'}]},
+    links:[{l:'Nasdaq Futures — Investing.com',u:'https://www.investing.com/indices/nq-100-futures'},{l:'Nasdaq Futures — TradingView',u:'https://www.tradingview.com/symbols/CME_MINI-NQ1!/'}],
+    histLink:{l:'Clôture Nasdaq futures vendredi — historique',u:'https://www.investing.com/indices/nq-100-futures-historical-data'}},
 };
 function isFuturesMarketClosed(){
   const now=new Date();
@@ -1955,6 +1992,8 @@ function updateEstimAuto(){
   }
   const linksBox=document.getElementById('estim-price-links');
   if(linksBox)linksBox.innerHTML=cfg.links.map(l=>`<a href="${l.u}" target="_blank" rel="noopener noreferrer" class="estim-link-btn">↗ ${l.l}</a>`).join('');
+  const histBox=document.getElementById('estim-hist-link');
+  if(histBox&&cfg.histLink)histBox.innerHTML=`<a href="${cfg.histLink.u}" target="_blank" rel="noopener noreferrer" class="estim-link-btn">↗ ${cfg.histLink.l}</a>`;
   const newsBox=document.getElementById('estim-news-ref');
   if(newsBox){
     const kw=_mktKw[cfg.newsCat];
@@ -1969,13 +2008,19 @@ function updateEstimAuto(){
     try{
       const h=loadHist();
       const arr=h[cfg.refKey];
+      const livePrice=DATA[cfg.refKey]?.ok?DATA[cfg.refKey].price:null;
       if(arr?.length){
         const friday=[...arr].reverse().find(e=>new Date(e.d+'T12:00:00').getDay()===5);
         const pick=friday||arr.at(-1);
-        closeInput.value=pick.c.toFixed(2);
-        if(closeNote)closeNote.textContent=friday?`auto : vendredi ${friday.d}`:`auto : dernier connu (${pick.d}, pas un vendredi)`;
-        const lastInput=document.getElementById('estim-last');
-        if(isFuturesMarketClosed()&&lastInput&&!lastInput.value)lastInput.value=pick.c.toFixed(2);
+        const suspect=livePrice&&pick.c>0&&Math.abs((livePrice-pick.c)/pick.c)>0.2;
+        if(suspect){
+          if(closeNote)closeNote.textContent=`⚠ valeur stockée (${pick.c.toFixed(2)}) très différente du prix actuel (${livePrice.toFixed(2)}) — probablement erronée, utilise le lien "historique" ci-dessous à la place`;
+        }else{
+          closeInput.value=pick.c.toFixed(2);
+          if(closeNote)closeNote.textContent=friday?`suggestion (${cfg.refKey}, pas l'instrument des liens ci-dessous) : vendredi ${friday.d} — pour un calcul cohérent, remplace par la vraie clôture via le lien "historique"`:`suggestion (${cfg.refKey}) : dernier connu (${pick.d})`;
+          const lastInput=document.getElementById('estim-last');
+          if(isFuturesMarketClosed()&&lastInput&&!lastInput.value)lastInput.value=pick.c.toFixed(2);
+        }
       }else if(closeNote)closeNote.textContent='historique pas encore disponible pour ce repère';
     }catch{}
   }
@@ -1987,6 +2032,10 @@ function computeEstimation(){
   const last=parseFloat(document.getElementById('estim-last')?.value);
   if(!close||!last){box.innerHTML='<div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div>';return;}
   const variation=((last-close)/close)*100;
+  if(Math.abs(variation)>15){
+    box.innerHTML=`<div class="info-box" style="border-color:rgba(242,73,92,.5);">🚨 <b>Variation improbable (${variation>=0?'+':''}${variation.toFixed(1)}%)</b> — ce n'est presque certainement pas un vrai mouvement de marché, mais une des deux valeurs saisies/auto-remplies qui est fausse. Vérifie la clôture vendredi (parfois erronée si l'historique local est corrompu) et le dernier prix relevé avant de continuer. Aucune estimation calculée tant que l'écart n'est pas corrigé.</div>`;
+    return;
+  }
   const estim=variation*3;
   const mk=document.getElementById('estim-market').value;
   const cfg=ESTIM_MARKETS[mk];
@@ -2025,6 +2074,36 @@ function updateEstimLogReel(i,val){
   if(!log[i])return;
   log[i].reel=val===''?null:parseFloat(val);
   saveEstimLog(log);
+}
+function renderGapHistory(){
+  const sel=document.getElementById('estim-market');if(!sel)return;
+  const cfg=ESTIM_MARKETS[sel.value];
+  const el=document.getElementById('estim-gap-hist');if(!el)return;
+  let arr;
+  try{arr=loadHist()[cfg.refKey];}catch{arr=null}
+  if(!arr||arr.length<2){el.innerHTML='<div class="info-box">Pas encore assez d\'historique local pour ce repère — ça se remplit automatiquement au fil des visites.</div>';return;}
+  const rows=[];
+  for(let i=1;i<arr.length;i++){
+    const prev=arr[i-1],cur=arr[i];
+    if(prev.c>0&&cur.o>0){
+      const gap=((cur.o-prev.c)/prev.c)*100;
+      const prevDay=new Date(prev.d+'T12:00:00').getDay();
+      const isWeekendGap=prevDay===5; // clôture un vendredi → gap de week-end
+      rows.push({from:prev.d,to:cur.d,gap,isWeekendGap});
+    }
+  }
+  if(!rows.length){el.innerHTML='<div class="info-box">Historique disponible mais sans données d\'ouverture pour l\'instant — se remplit progressivement à chaque nouvelle synchronisation.</div>';return;}
+  const last=rows.slice(-22).reverse();
+  const avgAbs=(rows.reduce((a,r)=>a+Math.abs(r.gap),0)/rows.length).toFixed(2);
+  const wkRows=rows.filter(r=>r.isWeekendGap);
+  const avgWk=wkRows.length?(wkRows.reduce((a,r)=>a+Math.abs(r.gap),0)/wkRows.length).toFixed(2):null;
+  const summary=`<div class="info-box" style="margin-bottom:.5rem;">📊 Gap moyen (valeur absolue) sur ${rows.length} jours : <b>${avgAbs}%</b>${avgWk?` · gaps de week-end uniquement : <b>${avgWk}%</b> (sur ${wkRows.length})`:''} — sert de repère pour juger si un gap à venir est dans la norme ou hors norme.</div>`;
+  const listRows=last.map(r=>`<div class="estim-log-row" style="grid-template-columns:1fr 1fr 1fr;">
+    <span>${r.from} → ${r.to}${r.isWeekendGap?' <span class="mono" style="color:var(--tx3);font-size:9px;">(week-end)</span>':''}</span>
+    <span></span>
+    <span class="${r.gap>=0?'g':'r'}">${r.gap>=0?'+':''}${r.gap.toFixed(2)}%</span>
+  </div>`).join('');
+  el.innerHTML=summary+`<div class="estim-log-row estim-log-hdr" style="grid-template-columns:1fr 1fr 1fr;"><span>Clôture → Ouverture suivante</span><span></span><span>Gap</span></div>${listRows}`;
 }
 function renderEstimLog(){
   const el=document.getElementById('estim-log');if(!el)return;
