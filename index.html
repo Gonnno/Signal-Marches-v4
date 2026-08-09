@@ -1,6 +1,28 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.19 — Détection automatique des actus réintégrée dans le score de confiance (au moins
+          un article pertinent trouvé dans l'onglet Actus = +20 points), sans case à cocher
+          manuelle — le score combine à nouveau deux facteurs (Asie + actus) au lieu d'un
+          seul.
+  v4.5.18 — Retiré le bloc "Actualité identifiée ?" / "Résumé" (le score de confiance repose
+          désormais uniquement sur la corroboration Asie, rescalé). Retiré le bouton
+          "Enregistrer dans le suivi" : chaque calcul valide s'enregistre automatiquement
+          (une entrée par marché et par jour, mise à jour si recalculé).
+  v4.5.17 — Correctif racine des estimations aberrantes : USO (~118$) n'est plus au même
+          niveau de prix que le WTI (~77$) — le fonds a divergé du spot au fil des années
+          (restructurations, effets de roulement). Mélanger la clôture USO stockée et un
+          "dernier prix" WTI relevé manuellement comparait deux échelles différentes, d'où
+          les résultats délirants. Préremplissage automatique basé sur USO/NVDA retiré ; les
+          deux champs (clôture vendredi + dernier prix) sont désormais purement manuels,
+          relevés sur le même instrument WTI via les mêmes liens. Le repère USO/NVDA en
+          direct affiche maintenant son %, pas son prix en $, pour éviter toute confusion
+          d'échelle. L'historique des gaps (v4.5.15) reste valide tel quel : il compare
+          l'instrument à lui-même en %, jamais son prix absolu au WTI.
+  v4.5.16 — Le garde-fou anti-valeur-suspecte (v4.5.12) ne se déclenchait que si le champ
+          "Clôture vendredi" était vide au chargement, ratant le cas où le navigateur avait
+          déjà rempli une ancienne valeur (autofill de formulaire). Il compare désormais le
+          contenu du champ au prix en direct dans tous les cas, valeur déjà présente incluse.
   v4.5.15 — Nouvelle section "Historique des gaps clôture → ouverture" dans l'onglet
           Estimation : entièrement automatique, sans saisie manuelle. Twelve Data et le
           repli Alpha Vantage renvoient déjà le prix d'ouverture de chaque jour en plus de
@@ -293,7 +315,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.15</title>
+<title>Signal Marchés · v4.5.19</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -578,7 +600,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.15</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.19</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -671,7 +693,7 @@ a{color:inherit;text-decoration:none;}
           <div class="card2-title">3 · Données <span style="color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0;">— pour un calcul cohérent, relève les deux prix ci-dessous sur le même site/instrument (voir liens)</span></div>
           <div class="estim-row">
             <label class="estim-lbl">Clôture vendredi du sous-jacent <span id="estim-close-note" style="display:block;color:var(--tx3);font-size:10px;margin-top:2px;"></span></label>
-            <input type="number" step="0.01" id="estim-close" class="estim-input" placeholder="auto" oninput="computeEstimation()">
+            <input type="number" step="0.01" id="estim-close" class="estim-input" placeholder="ex. 77.29" oninput="computeEstimation()">
           </div>
           <div id="estim-hist-link" class="estim-links-row"></div>
           <div class="estim-row">
@@ -679,28 +701,16 @@ a{color:inherit;text-decoration:none;}
             <input type="number" step="0.01" id="estim-last" class="estim-input" placeholder="ex. 66.90" oninput="computeEstimation()">
           </div>
           <div id="estim-price-links" class="estim-links-row"></div>
-          <div class="estim-row">
-            <label class="estim-lbl">Actualité identifiée ?</label>
-            <select id="estim-news" class="estim-input" onchange="computeEstimation()">
-              <option value="non">Non</option>
-              <option value="oui">Oui</option>
-            </select>
-          </div>
-          <div class="estim-row">
-            <label class="estim-lbl">Résumé (optionnel)</label>
-            <input type="text" id="estim-newstxt" class="estim-input" placeholder="ex. tensions Ormuz ce week-end">
-          </div>
           <div id="estim-news-ref"></div>
         </div>
 
         <div class="card2">
           <div class="card2-title">4 · Estimation</div>
           <div id="estim-result"><div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div></div>
-          <button class="btn-analyze" style="margin-top:.7rem;" onclick="logEstimation()">📝 Enregistrer dans le suivi</button>
         </div>
 
         <div class="card2">
-          <div class="card2-title">5 · Historique des gaps clôture → ouverture (auto, ~1 mois)</div>
+          <div class="card2-title">5 · Historique des gaps clôture → ouverture (auto, ~1 mois) <span style="color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0;">— basé sur le repère (USO/Nasdaq), en %, comparable même si son prix absolu diffère du WTI</span></div>
           <div id="estim-gap-hist"></div>
         </div>
 
@@ -1973,7 +1983,7 @@ function updateEstimAuto(){
   const gld=DATA['GLD'];
   html+=`<div class="estim-auto-item"><div class="estim-auto-lbl">Or (risk-off)</div><div class="estim-auto-val ${pctCls(gld?.pct)}">${gld?.ok?fmtPct(gld.pct):'—'}</div></div>`;
   const ref=DATA[cfg.refKey];
-  html+=`<div class="estim-auto-item"><div class="estim-auto-lbl">${cfg.refLabel}</div><div class="estim-auto-val ${pctCls(ref?.pct)}">${ref?.ok?fmtPrice(ref.price,cfg.refKey):'—'}</div></div>`;
+  html+=`<div class="estim-auto-item"><div class="estim-auto-lbl">${cfg.refLabel} (repère %, pas comparable en $ au WTI)</div><div class="estim-auto-val ${pctCls(ref?.pct)}">${ref?.ok?fmtPct(ref.pct):'—'}</div></div>`;
   box.innerHTML=html;
   const statusBox=document.getElementById('estim-market-status');
   if(statusBox){
@@ -1999,30 +2009,14 @@ function updateEstimAuto(){
     const kw=_mktKw[cfg.newsCat];
     const matches=(_NEWS||[]).filter(n=>kw?.test((n.titre||'')+(n.resume||''))).slice(0,2);
     newsBox.innerHTML=matches.length
-      ?`<div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-top:.5rem;margin-bottom:.2rem;">Actus déjà collectées (onglet Actus) — à toi de juger si ça compte comme "identifiée"</div>${matches.map(n=>`<div class="estim-news-ref-item"><b>${n.titre}</b>${n.resume?` — ${n.resume.slice(0,120)}${n.resume.length>120?'…':''}`:''}</div>`).join('')}`
+      ?`<div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-top:.5rem;margin-bottom:.2rem;">Actus déjà collectées (onglet Actus) pouvant expliquer le mouvement</div>${matches.map(n=>`<div class="estim-news-ref-item"><b>${n.titre}</b>${n.resume?` — ${n.resume.slice(0,120)}${n.resume.length>120?'…':''}`:''}</div>`).join('')}`
       :'';
   }
   const closeInput=document.getElementById('estim-close');
   const closeNote=document.getElementById('estim-close-note');
-  if(closeInput&&!closeInput.value){
-    try{
-      const h=loadHist();
-      const arr=h[cfg.refKey];
-      const livePrice=DATA[cfg.refKey]?.ok?DATA[cfg.refKey].price:null;
-      if(arr?.length){
-        const friday=[...arr].reverse().find(e=>new Date(e.d+'T12:00:00').getDay()===5);
-        const pick=friday||arr.at(-1);
-        const suspect=livePrice&&pick.c>0&&Math.abs((livePrice-pick.c)/pick.c)>0.2;
-        if(suspect){
-          if(closeNote)closeNote.textContent=`⚠ valeur stockée (${pick.c.toFixed(2)}) très différente du prix actuel (${livePrice.toFixed(2)}) — probablement erronée, utilise le lien "historique" ci-dessous à la place`;
-        }else{
-          closeInput.value=pick.c.toFixed(2);
-          if(closeNote)closeNote.textContent=friday?`suggestion (${cfg.refKey}, pas l'instrument des liens ci-dessous) : vendredi ${friday.d} — pour un calcul cohérent, remplace par la vraie clôture via le lien "historique"`:`suggestion (${cfg.refKey}) : dernier connu (${pick.d})`;
-          const lastInput=document.getElementById('estim-last');
-          if(isFuturesMarketClosed()&&lastInput&&!lastInput.value)lastInput.value=pick.c.toFixed(2);
-        }
-      }else if(closeNote)closeNote.textContent='historique pas encore disponible pour ce repère';
-    }catch{}
+  if(closeInput&&closeNote&&!closeNote.dataset.set){
+    closeNote.textContent=`à relever sur le lien "historique" ci-dessous — ne pas utiliser le prix ${cfg.refKey} (${cfg.refLabel}), échelle de prix différente du WTI`;
+    closeNote.dataset.set='1';
   }
   computeEstimation();
 }
@@ -2033,40 +2027,42 @@ function computeEstimation(){
   if(!close||!last){box.innerHTML='<div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div>';return;}
   const variation=((last-close)/close)*100;
   if(Math.abs(variation)>15){
-    box.innerHTML=`<div class="info-box" style="border-color:rgba(242,73,92,.5);">🚨 <b>Variation improbable (${variation>=0?'+':''}${variation.toFixed(1)}%)</b> — ce n'est presque certainement pas un vrai mouvement de marché, mais une des deux valeurs saisies/auto-remplies qui est fausse. Vérifie la clôture vendredi (parfois erronée si l'historique local est corrompu) et le dernier prix relevé avant de continuer. Aucune estimation calculée tant que l'écart n'est pas corrigé.</div>`;
+    box.innerHTML=`<div class="info-box" style="border-color:rgba(242,73,92,.5);">🚨 <b>Variation improbable (${variation>=0?'+':''}${variation.toFixed(1)}%)</b> — ce n'est presque certainement pas un vrai mouvement de marché, mais une des deux valeurs saisies qui est fausse. Vérifie les deux prix avant de continuer. Aucune estimation calculée tant que l'écart n'est pas corrigé.</div>`;
     return;
   }
   const estim=variation*3;
   const mk=document.getElementById('estim-market').value;
   const cfg=ESTIM_MARKETS[mk];
-  const newsOui=document.getElementById('estim-news').value==='oui';
   let asiaSameSign=0,asiaTotal=0;
   cfg.asia.forEach(([k])=>{
     const d=DATA[k];
     if(d?.ok&&d.pct!=null){asiaTotal++;if(Math.sign(d.pct)===Math.sign(variation)&&Math.abs(d.pct)>0.15)asiaSameSign++;}
   });
   const corrob=asiaTotal?asiaSameSign/asiaTotal:0;
-  const confPct=Math.round(Math.min(90,20+corrob*50+(newsOui?20:0)));
+  const kw=_mktKw[cfg.newsCat];
+  const hasNews=(_NEWS||[]).some(n=>kw?.test((n.titre||'')+(n.resume||'')));
+  const confPct=Math.round(Math.min(90,20+corrob*50+(hasNews?20:0)));
   const confColor=confPct>=70?'var(--gr)':confPct>=45?'var(--am)':'var(--rd)';
   const confBg=confPct>=70?'var(--gr-dim)':confPct>=45?'var(--am-dim)':'var(--rd-dim)';
   box.innerHTML=`
     <div style="font:400 12px/1.3 'IBM Plex Mono',monospace;color:var(--tx3);">Variation sous-jacent : <span class="${variation>=0?'g':'r'}">${variation>=0?'+':''}${variation.toFixed(2)}%</span></div>
     <div class="estim-result-main ${estim>=0?'g':'r'}">${estim>=0?'+':''}${estim.toFixed(1)}%</div>
     <div style="font:400 12px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);">Produit x3 <b>long</b> — pour un produit <b>short</b>, inverse simplement le signe (${estim>=0?'−':'+'}${Math.abs(estim).toFixed(1)}%)</div>
-    <div class="estim-conf" style="background:${confBg};color:${confColor};">Score de confiance ${confPct}% (heuristique, pas une probabilité statistique)${asiaTotal?` · Asie ${asiaSameSign}/${asiaTotal} dans le même sens`:''}${newsOui?' · actu confirmée':''}</div>`;
+    <div class="estim-conf" style="background:${confBg};color:${confColor};">Score de confiance ${confPct}% (heuristique, pas une probabilité statistique)${asiaTotal?` · Asie ${asiaSameSign}/${asiaTotal} dans le même sens`:''}${hasNews?' · actu détectée (onglet Actus)':''}</div>`;
+  logEstimation(mk,estim);
 }
 function loadEstimLog(){try{return JSON.parse(localStorage.getItem('smv4_estim_log')||'[]')}catch{return[]}}
 function saveEstimLog(l){try{localStorage.setItem('smv4_estim_log',JSON.stringify(l))}catch{}}
-function logEstimation(){
-  const close=parseFloat(document.getElementById('estim-close')?.value);
-  const last=parseFloat(document.getElementById('estim-last')?.value);
-  if(!close||!last)return;
-  const mk=document.getElementById('estim-market').value;
-  const variation=((last-close)/close)*100;
-  const estim=variation*3;
+function logEstimation(mk,estim){
+  const today=new Date().toISOString().slice(0,10);
   const log=loadEstimLog();
-  log.unshift({date:new Date().toISOString().slice(0,10),market:ESTIM_MARKETS[mk].label,lev:'X3L',estim:+estim.toFixed(1),reel:null});
-  saveEstimLog(log.slice(0,20));
+  const idx=log.findIndex(e=>e.date===today&&e.market===ESTIM_MARKETS[mk].label);
+  if(idx>=0){
+    log[idx].estim=+estim.toFixed(1);
+  }else{
+    log.unshift({date:today,market:ESTIM_MARKETS[mk].label,lev:'X3L',estim:+estim.toFixed(1),reel:null});
+  }
+  saveEstimLog(log.slice(0,30));
   renderEstimLog();
 }
 function updateEstimLogReel(i,val){
