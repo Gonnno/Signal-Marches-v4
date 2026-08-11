@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.28 — Persistance étendue aux trois champs (clôture vendredi, dernier prix connu, prix
+          du produit) au lieu de la seule clôture — chacun sauvegardé et restauré par
+          marché. Changer de marché ne fait plus perdre les valeurs déjà saisies pour l'autre
+          marché : elles sont juste remplacées par celles, propres, du marché sélectionné.
   v4.5.27 — Blocs 5 et 6 de l'onglet Estimation inversés : "Suivi de fiabilité" passe en 5,
           "Historique des gaps" en 6.
   v4.5.26 — Champ "Multiplicateur du produit" déplacé du bloc 1 (Sous-jacent & produit) vers
@@ -348,7 +352,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.27</title>
+<title>Signal Marchés · v4.5.28</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -633,7 +637,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.27</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.28</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -2068,14 +2072,16 @@ function updateEstimAuto(){
       :'';
   }
   const closeInput=document.getElementById('estim-close');
+  const lastInput=document.getElementById('estim-last');
+  const prodInput=document.getElementById('estim-product-price');
   const closeNote=document.getElementById('estim-close-note');
-  if(closeInput&&!closeInput.value){
-    const saved=loadEstimCloseStore()[sel.value];
-    if(saved?.val){
-      closeInput.value=saved.val;
-      if(closeNote){closeNote.textContent=`valeur enregistrée le ${saved.date} — remplace-la si une nouvelle semaine a commencé`;closeNote.dataset.set='1';}
-    }
+  const savedFields=loadEstimFieldStore()[sel.value]||{};
+  if(closeInput&&!closeInput.value&&savedFields.close?.val){
+    closeInput.value=savedFields.close.val;
+    if(closeNote){closeNote.textContent=`valeur enregistrée le ${savedFields.close.date} — remplace-la si une nouvelle semaine a commencé`;closeNote.dataset.set='1';}
   }
+  if(lastInput&&!lastInput.value&&savedFields.last?.val)lastInput.value=savedFields.last.val;
+  if(prodInput&&!prodInput.value&&savedFields.prod?.val)prodInput.value=savedFields.prod.val;
   if(closeInput&&closeNote&&!closeNote.dataset.set){
     closeNote.textContent=`à relever sur le lien "historique" ci-dessous — ne pas utiliser le prix ${cfg.refKey} (${cfg.refLabel}), échelle de prix différente du WTI`;
     closeNote.dataset.set='1';
@@ -2084,8 +2090,15 @@ function updateEstimAuto(){
 }
 function computeEstimation(){
   const box=document.getElementById('estim-result');if(!box)return;
-  const close=parseFloat(document.getElementById('estim-close')?.value);
-  const last=parseFloat(document.getElementById('estim-last')?.value);
+  const mk0=document.getElementById('estim-market').value;
+  const closeVal=document.getElementById('estim-close')?.value;
+  const lastVal=document.getElementById('estim-last')?.value;
+  const prodVal=document.getElementById('estim-product-price')?.value;
+  if(closeVal)saveEstimField(mk0,'close',closeVal);
+  if(lastVal)saveEstimField(mk0,'last',lastVal);
+  if(prodVal)saveEstimField(mk0,'prod',prodVal);
+  const close=parseFloat(closeVal);
+  const last=parseFloat(lastVal);
   const mult=parseFloat(document.getElementById('estim-mult')?.value)||3;
   if(!close||!last){box.innerHTML='<div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div>';return;}
   const variation=((last-close)/close)*100;
@@ -2094,7 +2107,6 @@ function computeEstimation(){
     return;
   }
   const mk=document.getElementById('estim-market').value;
-  saveEstimClose(mk,close);
   const estim=variation*mult;
   const cfg=ESTIM_MARKETS[mk];
   let asiaSameSign=0,asiaTotal=0;
@@ -2126,12 +2138,13 @@ function computeEstimation(){
     }
   }
 }
-function loadEstimCloseStore(){try{return JSON.parse(localStorage.getItem('smv4_estim_close')||'{}')}catch{return{}}}
-function saveEstimClose(mk,val){
+function loadEstimFieldStore(){try{return JSON.parse(localStorage.getItem('smv4_estim_fields')||'{}')}catch{return{}}}
+function saveEstimField(mk,field,val){
   try{
-    const all=loadEstimCloseStore();
-    all[mk]={val,date:new Date().toISOString().slice(0,10)};
-    localStorage.setItem('smv4_estim_close',JSON.stringify(all));
+    const all=loadEstimFieldStore();
+    if(!all[mk])all[mk]={};
+    all[mk][field]={val,date:new Date().toISOString().slice(0,10)};
+    localStorage.setItem('smv4_estim_fields',JSON.stringify(all));
   }catch{}
 }
 function loadEstimLog(){try{return JSON.parse(localStorage.getItem('smv4_estim_log')||'[]')}catch{return[]}}
