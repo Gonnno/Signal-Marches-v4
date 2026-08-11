@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.5.25 — Trois améliorations : (1) la clôture vendredi saisie est sauvegardée par marché
+          et restaurée automatiquement à la prochaine visite, avec la date de saisie
+          affichée ; (2) multiplicateur configurable (x3 par défaut) au lieu d'être figé,
+          utilisé dans le calcul du % et la projection de prix produit ; (3) le champ "réel"
+          du suivi de fiabilité précise maintenant explicitement qu'il attend le % du produit
+          lui-même, pas du WTI.
   v4.5.24 — Ajout d'un champ optionnel "Prix du produit vendredi" qui projette un prix
           d'ouverture estimé (long et short) à partir du % calculé, appliqué au bon prix (le
           produit lui-même, pas le WTI) — évite de mélanger les deux échelles de prix par
@@ -337,7 +343,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.24</title>
+<title>Signal Marchés · v4.5.25</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -622,7 +628,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.24</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.25</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -704,6 +710,10 @@ a{color:inherit;text-decoration:none;}
               <option value="semi">Semi-conducteurs (proxy Nasdaq)</option>
             </select>
           </div>
+          <div class="estim-row">
+            <label class="estim-lbl">Multiplicateur du produit</label>
+            <input type="number" step="0.5" min="1" id="estim-mult" class="estim-input" value="3" oninput="computeEstimation()">
+          </div>
         </div>
 
         <div class="card2">
@@ -743,7 +753,7 @@ a{color:inherit;text-decoration:none;}
         </div>
 
         <div class="card2">
-          <div class="card2-title">6 · Suivi de fiabilité (tes estimations passées)</div>
+          <div class="card2-title">6 · Suivi de fiabilité (tes estimations passées) <span style="color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0;">— dans "réel", indique le % réellement observé sur le produit lui-même (ouverture vs clôture vendredi), pas sur le WTI</span></div>
           <div id="estim-log"></div>
         </div>
 
@@ -2054,6 +2064,13 @@ function updateEstimAuto(){
   }
   const closeInput=document.getElementById('estim-close');
   const closeNote=document.getElementById('estim-close-note');
+  if(closeInput&&!closeInput.value){
+    const saved=loadEstimCloseStore()[sel.value];
+    if(saved?.val){
+      closeInput.value=saved.val;
+      if(closeNote){closeNote.textContent=`valeur enregistrée le ${saved.date} — remplace-la si une nouvelle semaine a commencé`;closeNote.dataset.set='1';}
+    }
+  }
   if(closeInput&&closeNote&&!closeNote.dataset.set){
     closeNote.textContent=`à relever sur le lien "historique" ci-dessous — ne pas utiliser le prix ${cfg.refKey} (${cfg.refLabel}), échelle de prix différente du WTI`;
     closeNote.dataset.set='1';
@@ -2064,14 +2081,16 @@ function computeEstimation(){
   const box=document.getElementById('estim-result');if(!box)return;
   const close=parseFloat(document.getElementById('estim-close')?.value);
   const last=parseFloat(document.getElementById('estim-last')?.value);
+  const mult=parseFloat(document.getElementById('estim-mult')?.value)||3;
   if(!close||!last){box.innerHTML='<div class="info-box">Renseigne la clôture vendredi et le dernier prix connu pour calculer.</div>';return;}
   const variation=((last-close)/close)*100;
   if(Math.abs(variation)>15){
     box.innerHTML=`<div class="info-box" style="border-color:rgba(242,73,92,.5);">🚨 <b>Variation improbable (${variation>=0?'+':''}${variation.toFixed(1)}%)</b> — ce n'est presque certainement pas un vrai mouvement de marché, mais une des deux valeurs saisies qui est fausse. Vérifie les deux prix avant de continuer. Aucune estimation calculée tant que l'écart n'est pas corrigé.</div>`;
     return;
   }
-  const estim=variation*3;
   const mk=document.getElementById('estim-market').value;
+  saveEstimClose(mk,close);
+  const estim=variation*mult;
   const cfg=ESTIM_MARKETS[mk];
   let asiaSameSign=0,asiaTotal=0;
   cfg.asia.forEach(([k])=>{
@@ -2087,9 +2106,9 @@ function computeEstimation(){
   box.innerHTML=`
     <div style="font:400 12px/1.3 'IBM Plex Mono',monospace;color:var(--tx3);">Variation sous-jacent : <span class="${variation>=0?'g':'r'}">${variation>=0?'+':''}${variation.toFixed(2)}%</span></div>
     <div class="estim-result-main ${estim>=0?'g':'r'}">${estim>=0?'+':''}${estim.toFixed(1)}%</div>
-    <div style="font:400 12px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);">Produit x3 <b>long</b> — pour un produit <b>short</b>, inverse simplement le signe (${estim>=0?'−':'+'}${Math.abs(estim).toFixed(1)}%)</div>
+    <div style="font:400 12px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);">Produit x${mult} <b>long</b> — pour un produit <b>short</b>, inverse simplement le signe (${estim>=0?'−':'+'}${Math.abs(estim).toFixed(1)}%)</div>
     <div class="estim-conf" style="background:${confBg};color:${confColor};">Score de confiance ${confPct}% (heuristique, pas une probabilité statistique)${asiaTotal?` · Asie ${asiaSameSign}/${asiaTotal} dans le même sens`:''}${hasNews?' · actu détectée (onglet Actus)':''}</div>`;
-  logEstimation(mk,estim);
+  logEstimation(mk,estim,mult);
   const prodBox=document.getElementById('estim-product-result');
   if(prodBox){
     const prodPrice=parseFloat(document.getElementById('estim-product-price')?.value);
@@ -2102,6 +2121,14 @@ function computeEstimation(){
     }
   }
 }
+function loadEstimCloseStore(){try{return JSON.parse(localStorage.getItem('smv4_estim_close')||'{}')}catch{return{}}}
+function saveEstimClose(mk,val){
+  try{
+    const all=loadEstimCloseStore();
+    all[mk]={val,date:new Date().toISOString().slice(0,10)};
+    localStorage.setItem('smv4_estim_close',JSON.stringify(all));
+  }catch{}
+}
 function loadEstimLog(){try{return JSON.parse(localStorage.getItem('smv4_estim_log')||'[]')}catch{return[]}}
 function saveEstimLog(l){try{localStorage.setItem('smv4_estim_log',JSON.stringify(l))}catch{}}
 function deleteEstimLogRow(i){
@@ -2110,14 +2137,16 @@ function deleteEstimLogRow(i){
   saveEstimLog(log);
   renderEstimLog();
 }
-function logEstimation(mk,estim){
+function logEstimation(mk,estim,mult){
   const today=new Date().toISOString().slice(0,10);
   const log=loadEstimLog();
+  const lev=`X${mult}L`;
   const idx=log.findIndex(e=>e.date===today&&e.market===ESTIM_MARKETS[mk].label);
   if(idx>=0){
     log[idx].estim=+estim.toFixed(1);
+    log[idx].lev=lev;
   }else{
-    log.unshift({date:today,market:ESTIM_MARKETS[mk].label,lev:'X3L',estim:+estim.toFixed(1),reel:null});
+    log.unshift({date:today,market:ESTIM_MARKETS[mk].label,lev,estim:+estim.toFixed(1),reel:null});
   }
   saveEstimLog(log.slice(0,30));
   renderEstimLog();
@@ -2179,7 +2208,7 @@ function renderEstimLog(){
       <span>${e.date}</span>
       <span>${e.market} ${e.lev}</span>
       <span class="${e.estim>=0?'g':'r'}">${e.estim>=0?'+':''}${e.estim}%</span>
-      <span style="display:flex;align-items:center;gap:6px;"><input type="number" step="0.1" class="estim-input" style="width:70px;max-width:none;padding:.3rem .4rem;" placeholder="réel %" value="${e.reel!=null?e.reel:''}" onchange="updateEstimLogReel(${i},this.value)">${ecart}</span>
+      <span style="display:flex;align-items:center;gap:6px;"><input type="number" step="0.1" class="estim-input" style="width:70px;max-width:none;padding:.3rem .4rem;" placeholder="% réel produit" title="% de variation réel du produit lui-même (prix ouverture vs clôture vendredi), même échelle que l'estimation ci-contre" value="${e.reel!=null?e.reel:''}" onchange="updateEstimLogReel(${i},this.value)">${ecart}</span>
       <button onclick="deleteEstimLogRow(${i})" title="Supprimer cette ligne" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px;">🗑</button>
     </div>`;
   }).join('');
