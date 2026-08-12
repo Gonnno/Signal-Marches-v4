@@ -1,6 +1,32 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.6.4 — Correction de numérotation : v4.6.4.
+  v4.6.0 — Changement de numérotation : passage à v4.6.0 (nouvelle série de versions).
+  v4.5.32 — Correctif préventif d'un débordement possible du texte dans les blocs de la liste
+          calendrier (min-width manquant en flexbox), et passage en flex-wrap pour s'adapter
+          aux petits écrans. Ajout d'un lien cliquable par événement vers une source en
+          français : calendrier économique fr.investing.com pour FOMC/NFP, page officielle
+          BCE en français pour les décisions de taux.
+  v4.5.31 — Onglet Calendrier repensé : la grille mensuelle est remplacée par une liste
+          chronologique simple des 12 prochains événements datés (FOMC, BCE, NFP), triés du
+          plus proche au plus loin avec un compte à rebours ("J-5", "demain"...). Les
+          événements hebdomadaires (stocks EIA, rig count) sortent de la liste et s'affichent
+          à part, juste la prochaine occurrence, pour ne pas la saturer.
+  v4.5.30 — Nouvel onglet "📅 Calendrier" avec vraie grille mensuelle navigable (mois
+          précédent/suivant). Combine deux types de données : dates FOMC et BCE officielles
+          pour 2026 (codées en dur, vérifiées auprès des sources Fed/ECB officielles — à
+          remettre à jour pour 2027), et motifs calculables valables toute année (NFP = 1er
+          vendredi du mois, stocks EIA = tous les mercredis, rig count = tous les vendredis).
+          Le CPI n'a pas de jour fixe, donc pas placé sur la grille — reste sur le calendrier
+          live en lien dans l'onglet Liens.
+  v4.5.29 — Nouveau bloc "Calendrier des événements marquants" dans l'onglet Liens :
+          inventaire des publications récurrentes qui font le plus bouger les marchés
+          suivis (CPI, NFP, FOMC, PCE, PMI pour le macro US ; saisons de résultats pour
+          semi-conducteurs/Nasdaq avec le calendrier fiscal décalé de Nvidia noté à part ;
+          stocks EIA et rig count pour le pétrole ; BCE/PMI pour l'Europe). Rythme habituel
+          uniquement (pas de dates exactes futures, non fiables à maintenir statiquement) —
+          le lien calendrier économique live déjà présent complète pour les dates précises.
   v4.5.28 — Persistance étendue aux trois champs (clôture vendredi, dernier prix connu, prix
           du produit) au lieu de la seule clôture — chacun sauvegardé et restauré par
           marché. Changer de marché ne fait plus perdre les valeurs déjà saisies pour l'autre
@@ -352,7 +378,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.5.28</title>
+<title>Signal Marchés · v4.6.4</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -597,6 +623,28 @@ a{color:inherit;text-decoration:none;}
 .estim-log-hdr{color:var(--tx3);text-transform:uppercase;font-size:10px;letter-spacing:.05em;}
 @media(max-width:560px){.estim-log-row{grid-template-columns:1fr 1fr;row-gap:2px;}}
 .link-card{background:var(--sur);border:1px solid var(--brd);border-radius:11px;padding:.8rem .95rem;display:flex;align-items:center;gap:.7rem;transition:border-color .2s,transform .15s;}
+.cal-group{margin-bottom:1.1rem;}
+.cal-group-title{font:600 12px/1 'IBM Plex Sans',sans-serif;color:var(--tx2);margin-bottom:.5rem;display:flex;align-items:center;gap:6px;}
+.cal-event{background:var(--sur2);border-radius:9px;padding:.6rem .8rem;margin-bottom:.5rem;}
+.cal-event-name{font:600 12.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx);}
+.cal-event-freq{font:400 10.5px/1 'IBM Plex Mono',monospace;color:var(--ac2);background:var(--ac-dim);display:inline-block;padding:2px 7px;border-radius:5px;margin-left:6px;}
+.cal-event-desc{font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:var(--tx3);margin-top:.3rem;}
+.cal-weekly-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
+.cal-weekly-item{background:var(--sur2);border-radius:8px;padding:.5rem .75rem;font:400 11.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);}
+.cal-weekly-item b{color:var(--tx);}
+.cal-list-item{display:flex;align-items:center;gap:.8rem;background:var(--sur2);border-radius:9px;padding:.65rem .85rem;margin-bottom:.5rem;flex-wrap:wrap;}
+.cal-list-date{font:600 12.5px/1.2 'IBM Plex Mono',monospace;color:var(--tx);min-width:88px;flex-shrink:0;}
+.cal-list-date .dow{display:block;font:400 9.5px/1 'IBM Plex Mono',monospace;color:var(--tx3);text-transform:uppercase;margin-top:1px;}
+.cal-list-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.cal-list-body{min-width:0;flex:1 1 140px;}
+.cal-list-name{font:600 12.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx);}
+.cal-list-sub{font:400 10.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx3);margin-top:1px;}
+.cal-list-days{margin-left:auto;font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);flex-shrink:0;white-space:nowrap;}
+.cal-list-link{font:500 10.5px/1 'IBM Plex Mono',monospace;color:var(--ac2);flex-shrink:0;white-space:nowrap;padding:4px 8px;background:var(--ac-dim);border-radius:6px;}
+.cal-list-link:hover{background:var(--sur3);}
+@media(max-width:560px){
+  .cal-list-date{min-width:64px;font-size:11px;}
+}
 .link-card:hover{border-color:var(--ac);transform:translateX(2px);}
 .link-ic{width:34px;height:34px;border-radius:9px;background:var(--ac-dim);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .link-name{font:600 13px/1.3 'IBM Plex Sans',sans-serif;}
@@ -637,13 +685,14 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.5.28</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.4</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
         <button class="tb-nav-item" id="tb-actus" onclick="gotoPage('actus')"><span class="tb-ic">📰</span><span class="tb-lbl"> Actus</span></button>
         <button class="tb-nav-item" id="tb-liens" onclick="gotoPage('liens')"><span class="tb-ic">🔗</span><span class="tb-lbl"> Liens</span></button>
         <button class="tb-nav-item" id="tb-estim" onclick="gotoPage('estim')"><span class="tb-ic">📐</span><span class="tb-lbl"> Estimation</span></button>
+        <button class="tb-nav-item" id="tb-calendar" onclick="gotoPage('calendar')"><span class="tb-ic">📅</span><span class="tb-lbl"> Calendrier</span></button>
         <span class="tb-spacer"></span>
         <span class="topbar-update mono" id="last-update"></span>
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Changer de thème">🌙</button>
@@ -697,6 +746,10 @@ a{color:inherit;text-decoration:none;}
         <div class="links-grid" id="links-data"></div>
         <div class="section-title">Calendrier & outils économiques<span class="line"></span></div>
         <div class="links-grid" id="links-tools"></div>
+
+        <div class="section-title">Calendrier des événements marquants (récurrents)<span class="line"></span></div>
+        <div class="info-box" style="margin-top:0;">📅 Rythme habituel des publications qui font le plus bouger les marchés suivis — pas les dates exactes du mois en cours (elles changent chaque mois/trimestre), à vérifier sur un calendrier live avant une échéance.</div>
+        <div id="calendar-events"></div>
         <div class="section-title">Crypto<span class="line"></span></div>
         <div class="links-grid" id="links-crypto"></div>
       </div></div>
@@ -769,6 +822,14 @@ a{color:inherit;text-decoration:none;}
         <div class="info-box" style="border-color:rgba(242,73,92,.35);">
           ⚠ <b>Limites</b> — Ceci est une extrapolation, pas une prédiction : elle suppose que la tendance se poursuit à l'identique jusqu'à l'ouverture réelle, ce qui est faux en cas d'actualité de dernière minute. La plupart des gaps sont petits et prévisibles, mais une minorité sont énormes et imprévisibles (aucun modèle ne les anticipe). Le marché du dimanche soir a un faible volume — les prix observés peuvent se corriger fortement une fois l'Europe ouverte. Le spread réellement exécutable chez ton courtier peut différer du prix théorique. Une meilleure estimation du gap ne réduit en rien le risque réel pris sur un produit x3 pendant ~34h de fermeture — ce n'est pas une raison de prendre une position plus grosse.
         </div>
+      </div></div>
+
+      <!-- PAGE: CALENDRIER -->
+      <div class="page" id="page-calendar"><div class="page-inner">
+        <div class="section-title">Calendrier des événements marquants<span class="line"></span></div>
+        <div class="info-box" style="margin-top:0;">📅 <b>FOMC/BCE</b> : dates officielles publiées pour 2026 (à remettre à jour pour 2027). <b>NFP</b> (1er vendredi du mois) calculé automatiquement, valable toute année. Le <b>CPI</b> n'a pas de jour fixe (généralement 2e semaine du mois) — voir le calendrier live en lien dans l'onglet Liens. <b>Stocks EIA</b> (tous les mercredis) et <b>rig count</b> (tous les vendredis) sont hebdomadaires, indiqués à part plutôt que de saturer la liste.</div>
+        <div id="cal-weekly" class="cal-weekly-row"></div>
+        <div id="cal-list"></div>
       </div></div>
 
     </div>
@@ -856,6 +917,7 @@ function gotoPage(name){
   document.getElementById('page-'+name)?.classList.add('active');
   document.getElementById('tb-'+name)?.classList.add('active');
   if(name==='estim'){updateEstimAuto();renderEstimLog();renderGapHistory();}
+  if(name==='calendar')renderCalendarList();
 }
 function gotoPageMobile(name){gotoPage(name);window.scrollTo({top:0,behavior:'smooth'});}
 (function(){
@@ -2233,6 +2295,96 @@ function renderEstimLog(){
   el.innerHTML=statsHtml+`<div class="estim-log-row estim-log-hdr" style="grid-template-columns:1fr 1fr 1fr 1fr 26px;"><span>Date</span><span>Produit</span><span>Estimation</span><span>Réel / écart</span><span></span></div>${rows}`;
 }
 
+/* ── Calendrier des événements récurrents — rythme habituel, pas de dates exactes futures ── */
+const CALENDAR_EVENTS=[
+  {group:'🇺🇸 Macro US (impacte large : Nasdaq, Actions larges, Or, Crypto)',items:[
+    {name:'CPI (inflation US)',freq:'Mensuel',desc:'Généralement 2e semaine du mois, 8h30 heure de New York (14h30 Paris, 15h30 en été). Le rapport macro le plus surveillé.'},
+    {name:'Emploi US (NFP)',freq:'Mensuel',desc:'1er vendredi du mois, 8h30 New York. Fort impact sur les anticipations de taux.'},
+    {name:'FOMC (décision de taux Fed)',freq:'8x/an',desc:'Décision à 14h New York (20h Paris), suivie d\'une conférence de presse ~30 min après — souvent plus volatile que la décision elle-même.'},
+    {name:'PCE (inflation préférée de la Fed)',freq:'Mensuel',desc:'Fin de mois, 8h30 New York.'},
+    {name:'PIB US',freq:'Trimestriel',desc:'Estimation avancée puis révisions successives.'},
+    {name:'ISM/PMI manufacturier & services',freq:'Mensuel',desc:'Début de mois, indicateur avancé de l\'activité économique.'},
+  ]},
+  {group:'🔬 Résultats d\'entreprises (Semi-conducteurs, Nasdaq)',items:[
+    {name:'Saison T1',freq:'Mi-avril → mi-mai',desc:'Résultats du 1er trimestre calendaire.'},
+    {name:'Saison T2',freq:'Mi-juillet → mi-août',desc:'Résultats du 2e trimestre calendaire.'},
+    {name:'Saison T3',freq:'Mi-octobre → mi-novembre',desc:'Résultats du 3e trimestre calendaire.'},
+    {name:'Saison T4 / annuel',freq:'Fin janvier → février',desc:'Résultats du 4e trimestre + bilan annuel.'},
+    {name:'Nvidia (calendrier fiscal décalé)',freq:'~Fév / Mai / Août / Nov',desc:'L\'exercice fiscal de Nvidia est décalé par rapport au calendrier — ses résultats sortent en dehors des pics de saison habituels, souvent très suivis pour tout le secteur semi.'},
+  ]},
+  {group:'🛢️ Pétrole & Énergie',items:[
+    {name:'Stocks hebdo EIA',freq:'Hebdomadaire (mercredi)',desc:'10h30 New York (16h30 Paris, 17h30 été) — fort impact court terme sur le WTI.'},
+    {name:'Rig count Baker Hughes',freq:'Hebdomadaire (vendredi)',desc:'13h New York — nombre de puits actifs, indicateur d\'offre à moyen terme.'},
+    {name:'Réunions OPEP+',freq:'Irrégulier',desc:'Pas de calendrier fixe — annoncées à l\'avance, impact potentiellement élevé sur les décisions de quotas.'},
+  ]},
+  {group:'🇪🇺 Zone euro (Bourse Européenne)',items:[
+    {name:'BCE (décision de taux)',freq:'8x/an',desc:'Conférence de presse suit la décision, comme la Fed.'},
+    {name:'PMI zone euro',freq:'Mensuel',desc:'Début de mois.'},
+  ]},
+  {group:'🥇 Or, Matières premières, Crypto',items:[
+    {name:'Sensibilité macro générale',freq:'Continu',desc:'Pas de calendrier propre — réagissent aux mêmes publications US (CPI, Fed, PCE) et au dollar (DXY). La crypto ajoute ses propres catalyseurs (décisions ETF, halving Bitcoin) sans calendrier fixe.'},
+  ]},
+];
+/* ── Calendrier : liste chronologique des prochains événements ── */
+/* Dates FOMC/BCE officielles 2026 — à mettre à jour pour 2027 (publiées à l'avance par la Fed/BCE) */
+const FOMC_DATES_2026=['2026-01-28','2026-03-18','2026-04-29','2026-06-17','2026-07-29','2026-09-16','2026-10-28','2026-12-09'];
+const ECB_DATES_2026=['2026-03-19','2026-04-30','2026-06-11','2026-07-23','2026-09-10','2026-10-29','2026-12-17'];
+function calNextWeekday(fromDate,targetDow){ // 0=dim...6=sam, retourne la prochaine occurrence (aujourd'hui inclus)
+  const d=new Date(fromDate);
+  const diff=(targetDow-d.getDay()+7)%7;
+  d.setDate(d.getDate()+diff);
+  return d;
+}
+function calFirstFridayOfMonth(year,month){
+  const d=new Date(year,month,1);
+  const diff=(5-d.getDay()+7)%7;
+  d.setDate(d.getDate()+diff);
+  return d;
+}
+function renderCalendarList(){
+  const weeklyEl=document.getElementById('cal-weekly');
+  const listEl=document.getElementById('cal-list');
+  if(!listEl)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dowFmt=d=>d.toLocaleDateString('fr-FR',{weekday:'short'});
+  const dateFmt=d=>d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+  const daysUntil=d=>Math.round((d-today)/86400000);
+  if(weeklyEl){
+    const nextWed=calNextWeekday(today,3),nextFri=calNextWeekday(today,5);
+    weeklyEl.innerHTML=`
+      <div class="cal-weekly-item">🛢️ Prochains <b>stocks EIA</b> : ${dateFmt(nextWed)} (${daysUntil(nextWed)===0?"aujourd'hui":daysUntil(nextWed)===1?'demain':`dans ${daysUntil(nextWed)}j`})</div>
+      <div class="cal-weekly-item">⚙️ Prochain <b>rig count</b> : ${dateFmt(nextFri)} (${daysUntil(nextFri)===0?"aujourd'hui":daysUntil(nextFri)===1?'demain':`dans ${daysUntil(nextFri)}j`})</div>`;
+  }
+  const events=[];
+  const linkFOMC='https://fr.investing.com/economic-calendar';
+  const linkBCE='https://www.ecb.europa.eu/press/govcdec/html/index.fr.html';
+  const linkNFP='https://fr.investing.com/economic-calendar';
+  FOMC_DATES_2026.forEach(ds=>events.push({date:new Date(ds+'T12:00:00'),name:'FOMC — décision de taux Fed',sub:'14h00 New York (20h Paris) + conférence de presse',dot:'var(--ac)',link:linkFOMC,linkLabel:'Calendrier FR'}));
+  ECB_DATES_2026.forEach(ds=>events.push({date:new Date(ds+'T12:00:00'),name:'BCE — décision de taux',sub:'14h15 CET + conférence de presse',dot:'var(--cyan)',link:linkBCE,linkLabel:'Site BCE FR'}));
+  for(let i=0;i<6;i++){
+    const m=today.getMonth()+i,y=today.getFullYear()+Math.floor(m/12);
+    events.push({date:calFirstFridayOfMonth(y,((m%12)+12)%12),name:'Emploi US (NFP)',sub:'1er vendredi du mois, 8h30 New York',dot:'var(--gr)',link:linkNFP,linkLabel:'Calendrier FR'});
+  }
+  const upcoming=events.filter(e=>e.date>=today).sort((a,b)=>a.date-b.date).slice(0,12);
+  listEl.innerHTML=upcoming.map(e=>{
+    const dj=daysUntil(e.date);
+    return`<div class="cal-list-item">
+      <div class="cal-list-date">${dateFmt(e.date)}<span class="dow">${dowFmt(e.date)}</span></div>
+      <span class="cal-list-dot" style="background:${e.dot};"></span>
+      <div class="cal-list-body"><div class="cal-list-name">${e.name}</div><div class="cal-list-sub">${e.sub}</div></div>
+      <a href="${e.link}" target="_blank" rel="noopener noreferrer" class="cal-list-link">↗ ${e.linkLabel}</a>
+      <div class="cal-list-days">${dj===0?"aujourd'hui":dj===1?'demain':`J-${dj}`}</div>
+    </div>`;
+  }).join('');
+}
+function renderCalendarEvents(){
+  const el=document.getElementById('calendar-events');if(!el)return;
+  el.innerHTML=CALENDAR_EVENTS.map(g=>`
+    <div class="cal-group">
+      <div class="cal-group-title">${g.group}</div>
+      ${g.items.map(e=>`<div class="cal-event"><span class="cal-event-name">${e.name}</span><span class="cal-event-freq">${e.freq}</span><div class="cal-event-desc">${e.desc}</div></div>`).join('')}
+    </div>`).join('');
+}
 function renderLinks(){
   const mk=(l)=>`<a href="${l.url}" target="_blank" rel="noopener noreferrer" class="link-card">
     <div class="link-ic">${l.ic}</div>
@@ -2244,6 +2396,7 @@ function renderLinks(){
   document.getElementById('links-crypto').innerHTML=LIENS.crypto.map(mk).join('');
 }
 renderLinks();
+renderCalendarEvents();
 analyserTout();
 </script>
 </body>
