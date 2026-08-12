@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.6.13 — Quatre correctifs : (1) cartes de liens désormais de hauteur égale dans une même
+          rangée (align-items:stretch au lieu de start) ; (2) intro de l'onglet Estimation
+          réduite à une phrase, le détail méthodologique complet déplacé dans le bloc
+          "Limites" en bas de page ; (3) espacement entre cette intro et le premier bloc
+          forcé via !important, même correctif que pour le calendrier ; (4) l'onglet
+          Calendrier a maintenant un vrai lien cliquable vers le calendrier économique live,
+          directement à la suite du texte, au lieu de renvoyer vers l'onglet Liens.
   v4.6.12 — Liens du calendrier remplacés : au lieu de pointer tous vers la même page
           générique, chaque événement génère un lien de recherche Google spécifique à son
           nom et sa date exacte (ex. "FOMC décision taux Fed 16 septembre 2026") — mène
@@ -410,7 +417,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.6.12</title>
+<title>Signal Marchés · v4.6.13</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -634,7 +641,7 @@ a{color:inherit;text-decoration:none;}
 .wc-type{font:600 11px/1 'IBM Plex Sans',sans-serif;text-transform:none;letter-spacing:0;margin-bottom:.5rem;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;}
 .wc-meta{font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3);margin-top:6px;}
 /* ── Liens utiles ── */
-.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1.3rem;align-items:start;}
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1.3rem;align-items:stretch;}
 .estim-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .estim-row:last-child{border-bottom:none;}
 .estim-lbl{font:400 12.5px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx2);flex-shrink:0;}
@@ -667,6 +674,7 @@ a{color:inherit;text-decoration:none;}
 .cal-list-link{font:500 10.5px/1 'IBM Plex Mono',monospace;color:var(--ac2);flex-shrink:0;white-space:nowrap;padding:4px 8px;background:var(--ac-dim);border-radius:6px;}
 .cal-list-link:hover{background:var(--sur3);}
 #cal-reminder{margin-bottom:1rem !important;}
+#estim-intro-box{margin-bottom:.85rem !important;}
 .cal-reminder-box{line-height:1.9;color:var(--tx2);}
 .cal-reminder-chip{display:inline-flex;align-items:center;gap:5px;background:var(--sur3);border:1px solid var(--brd2);padding:3px 9px;border-radius:6px;font-size:12px;font-weight:500;color:var(--tx);margin:0 2px;}
 .link-card:hover{border-color:var(--ac);transform:translateX(2px);}
@@ -709,7 +717,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.12</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.13</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -779,11 +787,7 @@ a{color:inherit;text-decoration:none;}
       <!-- PAGE: ESTIMATION -->
       <div class="page" id="page-estim"><div class="page-inner">
         <div class="section-title">Estimation du gap d'ouverture<span class="line"></span></div>
-        <div class="info-box" style="margin-top:0;">📐 Estime la variation probable d'un produit à levier avant l'ouverture, à partir du mouvement du sous-jacent pendant la fermeture (vendredi soir → lundi matin). <b>Ordre de grandeur, pas une prédiction</b> — les données marquées "saisie manuelle" ne sont pas disponibles gratuitement en direct, à toi de les relever chez ton courtier ou sur Investing.com/Barchart/TradingView.
-          <br><br>⏱ <b>Le WTI (CME Globex) ferme réellement vendredi ~23h et rouvre dimanche ~minuit-1h (heure de Paris, selon saison)</b> — avant réouverture, les liens affichent quand même un prix : c'est celui de vendredi, figé (souvent marqué "marché fermé"). Tu peux t'en servir directement pour "Clôture vendredi" sans passer par le lien "historique" séparé.
-          <br><br>✓ <b>Le WTI est un contrat unique mondial, sans version distincte pour l'Asie.</b> Il continue de coter en continu pendant la session asiatique puis européenne, sur le même lien. Le prix relevé juste avant l'ouverture de ta bourse (ex. ~7h30-9h Paris selon l'exchange) intègre donc tout le mouvement accumulé depuis vendredi soir — c'est le gap précis, pas une approximation.
-          <br><br>⚠ <b>Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis.</b> Il ne bouge que pendant les heures européennes et ne reflète le mouvement du week-end qu'à son ouverture — même si le WTI lui-même a déjà bougé depuis dimanche soir. Relève le "dernier prix connu" du WTI juste avant l'ouverture de ta bourse pour la meilleure estimation.
-          <br><br>⚠ <b>Le WTI affiché sur les liens ci-dessous (contrat générique/front-month) ne correspond pas exactement à l'indice que suit le produit à effet de levier.</b> Ces ETC suivent un indice Solactive avec son propre calendrier de roulement (2ᵉ contrat à terme), sont cotés en EUR/GBP (écart de change USD non pris en compte ici) et prélèvent des frais quotidiens. Le calcul reste donc un <b>ordre de grandeur du sens et de l'ampleur</b>, pas une valeur qui matchera exactement le prix réel du produit à l'ouverture.</div>
+        <div class="info-box" id="estim-intro-box" style="margin-top:0;">📐 Estime la variation probable d'un produit à levier avant l'ouverture, à partir du mouvement du sous-jacent pendant la fermeture (vendredi soir → lundi matin). <b>Ordre de grandeur, pas une prédiction.</b> Détails et limites méthodologiques en bas de page.</div>
 
         <div class="card2">
           <div class="card2-title">1 · Sous-jacent & produit</div>
@@ -843,13 +847,18 @@ a{color:inherit;text-decoration:none;}
 
         <div class="info-box" style="border-color:rgba(242,73,92,.35);">
           ⚠ <b>Limites</b> — Ceci est une extrapolation, pas une prédiction : elle suppose que la tendance se poursuit à l'identique jusqu'à l'ouverture réelle, ce qui est faux en cas d'actualité de dernière minute. La plupart des gaps sont petits et prévisibles, mais une minorité sont énormes et imprévisibles (aucun modèle ne les anticipe). Le marché du dimanche soir a un faible volume — les prix observés peuvent se corriger fortement une fois l'Europe ouverte. Le spread réellement exécutable chez ton courtier peut différer du prix théorique. Une meilleure estimation du gap ne réduit en rien le risque réel pris sur un produit x3 pendant ~34h de fermeture — ce n'est pas une raison de prendre une position plus grosse.
+          <br><br>📍 Les données marquées "saisie manuelle" ne sont pas disponibles gratuitement en direct, à toi de les relever chez ton courtier ou sur Investing.com/Barchart/TradingView.
+          <br><br>⏱ Le WTI (CME Globex) ferme réellement vendredi ~23h et rouvre dimanche ~minuit-1h (heure de Paris, selon saison) — avant réouverture, les liens affichent quand même un prix : c'est celui de vendredi, figé (souvent marqué "marché fermé"). Tu peux t'en servir directement pour "Clôture vendredi" sans passer par le lien "historique" séparé.
+          <br><br>✓ Le WTI est un contrat unique mondial, sans version distincte pour l'Asie. Il continue de coter en continu pendant la session asiatique puis européenne, sur le même lien. Le prix relevé juste avant l'ouverture de ta bourse (ex. ~7h30-9h Paris selon l'exchange) intègre donc tout le mouvement accumulé depuis vendredi soir — c'est le gap précis, pas une approximation.
+          <br><br>⚠ Ton produit à effet de levier (ex. Trade Republic) est probablement coté sur une bourse européenne (LSE, Xetra…), pas aux États-Unis. Il ne bouge que pendant les heures européennes et ne reflète le mouvement du week-end qu'à son ouverture — même si le WTI lui-même a déjà bougé depuis dimanche soir. Relève le "dernier prix connu" du WTI juste avant l'ouverture de ta bourse pour la meilleure estimation.
+          <br><br>⚠ Le WTI affiché sur les liens de la section 3 (contrat générique/front-month) ne correspond pas exactement à l'indice que suit le produit à effet de levier. Ces ETC suivent un indice Solactive avec son propre calendrier de roulement (2ᵉ contrat à terme), sont cotés en EUR/GBP (écart de change USD non pris en compte ici) et prélèvent des frais quotidiens. Le calcul reste donc un <b>ordre de grandeur du sens et de l'ampleur</b>, pas une valeur qui matchera exactement le prix réel du produit à l'ouverture.
         </div>
       </div></div>
 
       <!-- PAGE: CALENDRIER -->
       <div class="page" id="page-calendar"><div class="page-inner">
         <div class="section-title">Calendrier des événements marquants<span class="line"></span></div>
-        <div class="info-box" style="margin-top:0;">📅 <b>FOMC/BCE</b> : dates officielles publiées pour 2026 (à remettre à jour pour 2027). <b>NFP</b> (1er vendredi du mois), <b>stocks EIA</b> (tous les mercredis) et <b>rig count</b> (tous les vendredis) sont calculés automatiquement, valables toute année. Le <b>CPI</b> n'a pas de jour fixe (généralement 2e semaine du mois) — voir le calendrier live en lien dans l'onglet Liens.</div>
+        <div class="info-box" style="margin-top:0;">📅 <b>FOMC/BCE</b> : dates officielles publiées pour 2026 (à remettre à jour pour 2027). <b>NFP</b> (1er vendredi du mois), <b>stocks EIA</b> (tous les mercredis) et <b>rig count</b> (tous les vendredis) sont calculés automatiquement, valables toute année. Le <b>CPI</b> n'a pas de jour fixe (généralement 2e semaine du mois) — <a href="https://fr.investing.com/economic-calendar" target="_blank" rel="noopener noreferrer" style="color:var(--ac2);">↗ voir le calendrier économique live</a>.</div>
         <div id="cal-list"></div>
       </div></div>
 
