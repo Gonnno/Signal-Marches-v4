@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.6.14 — Calendrier enrichi : ajout de l'ISM PMI manufacturier US (1er jour ouvré du
+          mois, règle fiable comme les autres). Libellés traduits en français plus complet
+          ("Nombre de forages actifs US" au lieu de "Rig count", "Rapport sur l'emploi
+          américain" au lieu de "NFP", etc.) pour plus de clarté visuelle. Chaque événement
+          affiche désormais une icône indiquant le marché du 1er onglet le plus concerné
+          (🛢️ pétrole, 📈 Nasdaq, 🇪🇺 Europe, 🌍 macro large), reprise sur le rappel de la
+          page Marchés aussi.
   v4.6.13 — Quatre correctifs : (1) cartes de liens désormais de hauteur égale dans une même
           rangée (align-items:stretch au lieu de start) ; (2) intro de l'onglet Estimation
           réduite à une phrase, le détail méthodologique complet déplacé dans le bloc
@@ -417,7 +424,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.6.13</title>
+<title>Signal Marchés · v4.6.14</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -668,6 +675,7 @@ a{color:inherit;text-decoration:none;}
 .cal-list-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .cal-list-date{font:600 12px/1.2 'IBM Plex Mono',monospace;color:var(--tx3);flex-shrink:0;}
 .cal-list-name{font:600 13px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx);flex:1;}
+.cal-list-cat{font-size:13px;flex-shrink:0;}
 .cal-list-days{font:600 11px/1 'IBM Plex Mono',monospace;color:var(--ac2);flex-shrink:0;}
 .cal-list-bottom{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.35rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.04);}
 .cal-list-sub{font:400 11px/1.3 'IBM Plex Sans',sans-serif;color:var(--tx3);}
@@ -717,7 +725,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.13</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.14</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -858,7 +866,7 @@ a{color:inherit;text-decoration:none;}
       <!-- PAGE: CALENDRIER -->
       <div class="page" id="page-calendar"><div class="page-inner">
         <div class="section-title">Calendrier des événements marquants<span class="line"></span></div>
-        <div class="info-box" style="margin-top:0;">📅 <b>FOMC/BCE</b> : dates officielles publiées pour 2026 (à remettre à jour pour 2027). <b>NFP</b> (1er vendredi du mois), <b>stocks EIA</b> (tous les mercredis) et <b>rig count</b> (tous les vendredis) sont calculés automatiquement, valables toute année. Le <b>CPI</b> n'a pas de jour fixe (généralement 2e semaine du mois) — <a href="https://fr.investing.com/economic-calendar" target="_blank" rel="noopener noreferrer" style="color:var(--ac2);">↗ voir le calendrier économique live</a>.</div>
+        <div class="info-box" style="margin-top:0;">📅 <b>Fed/BCE</b> : dates officielles publiées pour 2026 (à remettre à jour pour 2027). <b>Emploi US</b> (1er vendredi du mois), <b>ISM PMI</b> (1er jour ouvré), <b>stocks pétrole</b> (tous les mercredis) et <b>forages actifs</b> (tous les vendredis) sont calculés automatiquement, valables toute année. L'icône devant chaque événement indique le marché suivi le plus concerné. Le <b>CPI</b> n'a pas de jour fixe (généralement 2e semaine du mois) — <a href="https://fr.investing.com/economic-calendar" target="_blank" rel="noopener noreferrer" style="color:var(--ac2);">↗ voir le calendrier économique live</a>.</div>
         <div id="cal-list"></div>
       </div></div>
 
@@ -2343,28 +2351,35 @@ function calFirstFridayOfMonth(year,month){
   return d;
 }
 function calGoogleUrl(query){return`https://www.google.com/search?q=${encodeURIComponent(query)}`;}
+function calFirstBusinessDayOfMonth(year,month){
+  const d=new Date(year,month,1);
+  while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);
+  return d;
+}
 function getCalendarEvents(maxCount){
   const today=new Date();today.setHours(0,0,0,0);
   const events=[];
   const dLabel=d=>d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   FOMC_DATES_2026.forEach(ds=>{
     const date=new Date(ds+'T12:00:00');
-    events.push({date,name:'FOMC — décision de taux Fed',sub:'14h00 New York (20h Paris) + conférence de presse',dot:'var(--ac)',link:calGoogleUrl(`FOMC décision taux Fed ${dLabel(date)}`),linkLabel:'Rechercher'});
+    events.push({date,name:'Réserve fédérale américaine (Fed) — décision de taux',sub:'14h00 New York (20h Paris) + conférence de presse',dot:'var(--ac)',cat:'🌍',link:calGoogleUrl(`FOMC décision taux Fed ${dLabel(date)}`),linkLabel:'Rechercher'});
   });
   ECB_DATES_2026.forEach(ds=>{
     const date=new Date(ds+'T12:00:00');
-    events.push({date,name:'BCE — décision de taux',sub:'14h15 CET + conférence de presse',dot:'var(--cyan)',link:calGoogleUrl(`BCE décision taux ${dLabel(date)}`),linkLabel:'Rechercher'});
+    events.push({date,name:'Banque centrale européenne (BCE) — décision de taux',sub:'14h15 CET + conférence de presse',dot:'var(--cyan)',cat:'🇪🇺',link:calGoogleUrl(`BCE décision taux ${dLabel(date)}`),linkLabel:'Rechercher'});
   });
   for(let i=0;i<6;i++){
     const m=today.getMonth()+i,y=today.getFullYear()+Math.floor(m/12);
     const date=calFirstFridayOfMonth(y,((m%12)+12)%12);
-    events.push({date,name:'Emploi US (NFP)',sub:'1er vendredi du mois, 8h30 New York',dot:'var(--gr)',link:calGoogleUrl(`emploi américain NFP ${dLabel(date)}`),linkLabel:'Rechercher'});
+    events.push({date,name:'Rapport sur l\'emploi américain (NFP)',sub:'1er vendredi du mois, 8h30 New York',dot:'var(--gr)',cat:'🌍',link:calGoogleUrl(`emploi américain NFP ${dLabel(date)}`),linkLabel:'Rechercher'});
+    const dPmi=calFirstBusinessDayOfMonth(y,((m%12)+12)%12);
+    events.push({date:dPmi,name:'Indice manufacturier américain (ISM PMI)',sub:'1er jour ouvré du mois, 10h00 New York',dot:'var(--gr)',cat:'📈',link:calGoogleUrl(`ISM PMI manufacturier ${dLabel(dPmi)}`),linkLabel:'Rechercher'});
   }
   for(let i=0;i<4;i++){
     const base=new Date(today);base.setDate(base.getDate()+i*7);
     const dEIA=calNextWeekday(base,3),dRig=calNextWeekday(base,5);
-    events.push({date:dEIA,name:'Stocks pétrole (EIA)',sub:'Hebdomadaire, 10h30 New York (16h30 Paris)',dot:'var(--am)',link:calGoogleUrl(`stocks pétrole EIA ${dLabel(dEIA)}`),linkLabel:'Rechercher'});
-    events.push({date:dRig,name:'Rig count (Baker Hughes)',sub:'Hebdomadaire, 13h00 New York',dot:'var(--tx3)',link:calGoogleUrl(`rig count Baker Hughes ${dLabel(dRig)}`),linkLabel:'Rechercher'});
+    events.push({date:dEIA,name:'Stocks hebdomadaires de pétrole (EIA)',sub:'Hebdomadaire, 10h30 New York (16h30 Paris)',dot:'var(--am)',cat:'🛢️',link:calGoogleUrl(`stocks pétrole EIA ${dLabel(dEIA)}`),linkLabel:'Rechercher'});
+    events.push({date:dRig,name:'Nombre de forages actifs US (Baker Hughes)',sub:'Hebdomadaire, 13h00 New York',dot:'var(--tx3)',cat:'🛢️',link:calGoogleUrl(`rig count Baker Hughes ${dLabel(dRig)}`),linkLabel:'Rechercher'});
   }
   const seen=new Set();
   return events.filter(e=>{
@@ -2385,7 +2400,7 @@ function renderCalendarReminder(){
   const todayEvents=all.filter(e=>daysUntil(e.date)===0);
   const weekEvents=all.filter(e=>{const dj=daysUntil(e.date);return dj>0&&dj<=7;});
   if(!todayEvents.length&&!weekEvents.length){el.innerHTML='';return;}
-  const chip=(e,showDate)=>`<span class="cal-reminder-chip"><span class="cal-list-dot" style="background:${e.dot};"></span>${e.name}${showDate?` — ${dateFmt(e.date)}`:''}</span>`;
+  const chip=(e,showDate)=>`<span class="cal-reminder-chip"><span class="cal-list-dot" style="background:${e.dot};"></span>${e.cat} ${e.name}${showDate?` — ${dateFmt(e.date)}`:''}</span>`;
   let html='<div class="info-box cal-reminder-box" style="margin-top:0;">📅 ';
   if(todayEvents.length)html+=`<b style="color:var(--tx);">Aujourd'hui :</b> ${todayEvents.map(e=>chip(e,false)).join(' · ')}`;
   if(todayEvents.length&&weekEvents.length)html+='<br>';
@@ -2407,6 +2422,7 @@ function renderCalendarList(){
       <div class="cal-list-top">
         <span class="cal-list-dot" style="background:${e.dot};"></span>
         <span class="cal-list-date">${dateFmt(e.date)} ${dowFmt(e.date)}</span>
+        <span class="cal-list-cat" title="Marché impacté">${e.cat}</span>
         <span class="cal-list-name">${e.name}</span>
         <span class="cal-list-days">${dj===0?"aujourd'hui":dj===1?'demain':`J-${dj}`}</span>
       </div>
