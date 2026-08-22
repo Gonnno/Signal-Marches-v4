@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <!--
   Changelog Signal Marchés
+  v4.6.19 — Correctif : cliquer sur un lien à l'intérieur d'une carte Marchés dépliée (actus,
+          sélection ETF...) refermait la carte, car le bascule d'ouverture/fermeture était
+          posé sur toute la carte (corps compris) au lieu de son en-tête. Déplacé sur
+          l'en-tête uniquement — les liens du corps ne déclenchent plus la fermeture.
+  v4.6.18 — Correctif débordement horizontal sur mobile dans les blocs 3 et 4 de
+          l'Estimation : le label (avec flex-shrink:0) refusait de rétrécir à côté du champ
+          de saisie, débordant hors de l'écran avec les libellés longs. Sous 560px, label et
+          champ s'empilent verticalement au lieu de se partager la largeur.
+  v4.6.17 — Liens "Actualités du jour" des cartes Marchés restreints aux résultats en
+          français (`lr=lang_fr` ajouté à l'URL Google), sans toucher aux requêtes de
+          recherche elles-mêmes.
+  v4.6.16 — Annulée : la section "Note de Claude" (manuelle) a été ajoutée puis retirée dans
+          la même session — pas assez pratique en usage manuel. Version revenue à v4.6.15.
   v4.6.15 — "Dernier prix connu avant ouverture" retiré de la persistance (sauvegarde et
           restauration) — il se remplissait tout seul à chaque rechargement de page avec
           l'ancienne valeur, ce qui relançait le calcul et recréait une entrée dans le
@@ -430,7 +443,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Marchés · v4.6.15</title>
+<title>Signal Marchés · v4.6.19</title>
 <meta name="description" content="Dashboard financier temps réel — marchés mondiaux, signaux techniques et actualités.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -538,11 +551,11 @@ a{color:inherit;text-decoration:none;}
 .vedette-actifs{display:flex;flex-wrap:wrap;gap:4px;margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.07);}
 .vedette-actif{font:500 12px/1 'IBM Plex Mono',monospace;padding:4px 9px;border-radius:5px;background:rgba(255,255,255,.05);}
 /* ── Market card ── */
-.mc{background:var(--sur);border:1px solid var(--brd);border-radius:13px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;}
+.mc{background:var(--sur);border:1px solid var(--brd);border-radius:13px;overflow:hidden;transition:border-color .2s,transform .15s,box-shadow .2s;}
 .mc:hover{border-color:var(--brd2);}
 .mc.open{border-color:var(--brd2);box-shadow:var(--shadow);}
 .mc.star{border-color:rgba(76,141,201,.4);background:linear-gradient(180deg,var(--sur),rgba(76,141,201,.06));}
-.mc-head{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:12px;padding:1rem 1.15rem;}
+.mc-head{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:12px;padding:1rem 1.15rem;cursor:pointer;}
 .mc-status{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .mc-dot{width:7px;height:7px;border-radius:50%;}
 .mc-dot.on{background:var(--gr);box-shadow:0 0 6px var(--gr);}
@@ -673,7 +686,11 @@ a{color:inherit;text-decoration:none;}
 .estim-news-ref-item{background:var(--sur2);border-radius:8px;padding:.55rem .7rem;margin-top:.4rem;font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:var(--tx2);}
 .estim-news-ref-item b{color:var(--tx);}
 .estim-log-hdr{color:var(--tx3);text-transform:uppercase;font-size:10px;letter-spacing:.05em;}
-@media(max-width:560px){.estim-log-row{grid-template-columns:1fr 1fr;row-gap:2px;}}
+@media(max-width:560px){
+  .estim-log-row{grid-template-columns:1fr 1fr;row-gap:2px;}
+  .estim-row{flex-direction:column;align-items:flex-start;gap:6px;}
+  .estim-input{width:100%;max-width:100%;}
+}
 .link-card{background:var(--sur);border:1px solid var(--brd);border-radius:11px;padding:.8rem .95rem;display:flex;align-items:center;gap:.7rem;transition:border-color .2s,transform .15s;}
 .cal-list-item{background:var(--sur2);border-radius:9px;padding:.65rem .85rem;}
 #cal-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.9rem;}
@@ -731,7 +748,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <div class="topbar">
       <div class="topbar-inner">
-        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.15</span></span>
+        <span class="topbar-brand"><span class="brand-dot"></span>Signal Marchés <span class="ver-tag">v4.6.19</span></span>
         <span class="topbar-sep">·</span>
         <button class="tb-nav-item active" id="tb-global" onclick="gotoPage('global')"><span class="tb-ic">🌐</span><span class="tb-lbl"> Marchés</span></button>
         <button class="tb-nav-item" id="tb-monde" onclick="gotoPage('monde')"><span class="tb-ic">🗺️</span><span class="tb-lbl"> Monde</span></button>
@@ -1687,7 +1704,7 @@ const GNEWS_QUERIES={
 };
 function gnewsLinks(key){
   const list=GNEWS_QUERIES[key]||[{l:'Marchés',q:'bourse marchés financiers'}];
-  return list.map(({l,q})=>({label:l,url:`https://www.google.com/search?q=${encodeURIComponent(q)}&num=10&tbs=qdr%3Ad%2Csbd%3A1&tbm=nws`}));
+  return list.map(({l,q})=>({label:l,url:`https://www.google.com/search?q=${encodeURIComponent(q)}&num=10&tbs=qdr%3Ad%2Csbd%3A1&tbm=nws&lr=lang_fr`}));
 }
 function selectionETF(key,sig,newsItems){
   const dir=sig==='ACHAT'?'bull':sig==='VENTE'?'bear':null;
@@ -1916,8 +1933,8 @@ function renderGlobal(signals,NEWS,ms){
           ${newsTxt?`<div class="opp-item-news">📰 ${newsTxt}</div>`:'<div class="opp-item-news dim">Aucune actualité récente liée</div>'}
         </div>`;
       }).join('');
-      return`<div class="mc" id="mc-radar" onclick="toggleMC('radar')">
-        <div class="mc-head">
+      return`<div class="mc" id="mc-radar">
+        <div class="mc-head" onclick="toggleMC('radar')">
           <div class="mc-status"><div class="mc-dot on"></div><span class="mc-dlabel on">SCAN</span><span class="mc-hor">${top.length} opportunité${top.length>1?'s':''}</span></div>
           <div><div class="mc-label">${m.icon} ${m.label}</div><div class="mc-sig g">${top.length} signal${top.length>1?'aux':''} actionnable${top.length>1?'s':''}</div><div class="mc-sub">${m.sub}</div></div>
           <div class="mc-right"><span class="mc-arrow">▼</span></div>
@@ -1964,8 +1981,8 @@ function renderGlobal(signals,NEWS,ms){
         <div style="margin-top:.6rem;font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3);">Score technique ${fmtScore(s.Htech)}/100 · ${deltaTxt} · confiance ${s.confPct}%</div>
         <div class="confbar-track"><div class="confbar-fill" style="width:${s.confPct}%;background:${confColor};"></div></div>
       </div>`:'';
-    return`<div class="mc${isVed?' star':''}" id="mc-${m.key}" onclick="toggleMC('${m.key}')">
-      <div class="mc-head">
+    return`<div class="mc${isVed?' star':''}" id="mc-${m.key}">
+      <div class="mc-head" onclick="toggleMC('${m.key}')">
         <div class="mc-status"><div class="mc-dot ${m.open?'on':'off'}"></div><span class="mc-dlabel ${m.open?'on':'off'}">${m.open?'OUVERT':'FERMÉ'}</span><span class="mc-hor">${m.horaire}</span></div>
         <div>
           <div class="mc-label">${m.icon} ${m.label}${isVed?` <span class="mc-star-tag">★ VEDETTE</span>`:''}</div>
